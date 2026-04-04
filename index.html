@@ -103,7 +103,11 @@
   .auth-box{background:#fff;padding:40px;border-radius:12px;text-align:center;max-width:400px;}
   .auth-box h2{margin-bottom:20px;color:#1a56db;}
   .auth-box input{width:100%;padding:12px;margin-bottom:15px;border:1px solid #e2e6ea;border-radius:6px;font-size:14px;}
-  .auth-box button{background:#1a56db;color:#fff;border:none;padding:12px 30px;border-radius:6px;cursor:pointer;font-weight:600;width:100%;}
+  .auth-box button{background:#1a56db;color:#fff;border:none;padding:12px 30px;border-radius:6px;cursor:pointer;font-weight:600;width:100%;margin-bottom:10px;}
+  .auth-box .guest-btn{background:#6b7280;}
+  .auth-box .guest-btn:hover{background:#4b5563;}
+  .auth-box .divider-text{text-align:center;color:#999;margin:15px 0;font-size:12px;}
+  .auth-box .admin-section{border-top:1px solid #e2e6ea;padding-top:15px;}
 </style>
 </head>
 <body>
@@ -277,11 +281,17 @@
 
 <div id="authModal" class="auth-modal" style="display:none;">
   <div class="auth-box">
-    <h2>🔐 Acceso Administrativo</h2>
-    <p style="margin-bottom:20px;color:#666;">Ingresa tu contraseña para acceso total</p>
-    <input type="password" id="adminPass" placeholder="Contraseña" onkeypress="if(event.key==='Enter') checkAuth()">
-    <button onclick="checkAuth()">Acceder</button>
-    <p style="margin-top:15px;font-size:12px;color:#999;">Usuarios sin contraseña: Solo filtros y drop</p>
+    <h2>🔐 Acceso al Ecosistema</h2>
+    <p style="margin-bottom:20px;color:#666;">Selecciona tu tipo de acceso</p>
+    
+    <button class="guest-btn" onclick="accessAsGuest()">👤 Continuar como Invitado</button>
+    
+    <div class="divider-text">O ingresa tu contraseña de administrador</div>
+    
+    <div class="admin-section">
+      <input type="password" id="adminPass" placeholder="Contraseña" onkeypress="if(event.key==='Enter') checkAuth()">
+      <button onclick="checkAuth()">🔓 Acceso Administrativo</button>
+    </div>
   </div>
 </div>
 
@@ -289,16 +299,26 @@
 (function() {
   const ADMIN_PASSWORD = 'Mundowarcraft1';
   const isAdmin = sessionStorage.getItem('admin') === 'true';
+  const isGuest = sessionStorage.getItem('guest') === 'true';
   
-  if (!isAdmin) {
+  if (!isAdmin && !isGuest) {
     document.getElementById('authModal').style.display = 'flex';
     enableProtections();
+  } else if (isAdmin) {
+    disableProtections();
   }
+  
+  window.accessAsGuest = function() {
+    sessionStorage.setItem('guest', 'true');
+    document.getElementById('authModal').style.display = 'none';
+    enableProtections();
+  };
   
   window.checkAuth = function() {
     const pass = document.getElementById('adminPass').value;
     if (pass === ADMIN_PASSWORD) {
       sessionStorage.setItem('admin', 'true');
+      sessionStorage.removeItem('guest');
       document.getElementById('authModal').style.display = 'none';
       disableProtections();
     } else {
