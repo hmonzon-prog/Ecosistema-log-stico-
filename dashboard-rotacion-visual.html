@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis de Rotación — Loginter</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<style>
+  :root {
+    --accent:#1a56db; --green:#057a55; --red:#c81e1e; --yellow:#d97706; --orange:#ea580c;
+    --bg:#f0f2f5; --surface:#ffffff; --surface2:#f7f8fa; --border:#e2e6ea;
+    --text:#111827; --muted:#6b7280;
+    --font-display:'Barlow Condensed',sans-serif;
+    --font-body:'Barlow',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;}
+  .header{background:#fff;border-bottom:3px solid var(--accent);padding:0 24px;height:72px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.06);position:sticky;top:0;z-index:100;}
+  .header-left{display:flex;align-items:center;gap:16px;}
+  .back-btn{display:flex;align-items:center;gap:6px;background:#f0f3f7;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:#475569;cursor:pointer;transition:all 0.2s;font-family:inherit;}
+  .back-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .header-title{font-family:var(--font-display);font-size:18px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;}
+  .header-title span{color:var(--accent);}
+  .upload-zone{background:#fff;border:2px dashed var(--accent);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;margin:24px;}
+  .upload-zone:hover{background:rgba(26,86,219,0.02);border-color:#1e429f;}
+  .upload-zone.active{background:rgba(26,86,219,0.05);border-color:#1e429f;}
+  .upload-icon{font-size:48px;margin-bottom:12px;}
+  .upload-text{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;}
+  .upload-sub{font-size:12px;color:var(--muted);}
+  #fileInput{display:none;}
+  .main{padding:24px;}
+  .alerts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:24px;}
+  .alert{padding:16px;border-radius:12px;border-left:4px solid;display:flex;gap:12px;align-items:flex-start;}
+  .alert-icon{font-size:24px;flex-shrink:0;}
+  .alert-content{flex:1;}
+  .alert-title{font-weight:700;font-size:13px;margin-bottom:2px;}
+  .alert-desc{font-size:12px;opacity:0.8;}
+  .alert-danger{background:rgba(200,30,30,0.08);border-color:#c81e1e;color:#7f1d1d;}
+  .alert-warning{background:rgba(217,119,6,0.08);border-color:#d97706;color:#92400e;}
+  .alert-success{background:rgba(5,122,85,0.08);border-color:#057a55;color:#065f46;}
+  .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:24px;margin-bottom:24px;}
+  .chart-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+  .chart-title{font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:16px;color:var(--text);}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;}
+  .stat-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;}
+  .stat-value{font-family:var(--font-display);font-size:28px;font-weight:900;color:var(--accent);line-height:1;}
+  .stat-label{font-size:12px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;}
+  .table-container{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px;}
+  .table-title{font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface2);}
+  table{width:100%;border-collapse:collapse;}
+  th{background:var(--surface2);padding:12px 16px;text-align:left;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1px solid var(--border);}
+  td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;}
+  tr:hover{background:var(--surface2);}
+  .badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+  .badge-a{background:rgba(200,30,30,0.1);color:#c81e1e;}
+  .badge-b{background:rgba(217,119,6,0.1);color:#d97706;}
+  .badge-c{background:rgba(5,122,85,0.1);color:#057a55;}
+  .badge-sin{background:rgba(107,114,124,0.1);color:#6b7280;}
+  .loading{display:none;text-align:center;padding:40px;color:var(--muted);}
+  .loading.active{display:block;}
+  .spinner{display:inline-block;width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .footer{text-align:center;padding:16px;color:var(--muted);font-size:11px;border-top:1px solid var(--border);background:#fff;margin-top:24px;}
+  @media(max-width:768px){
+    .header{padding:0 16px;height:60px;}
+    .header-title{font-size:14px;}
+    .upload-zone{margin:16px;padding:20px;}
+    .main{padding:16px;}
+    .charts-grid{grid-template-columns:1fr;}
+    .stats-grid{grid-template-columns:repeat(2,1fr);}
+    table{font-size:11px;}
+    th,td{padding:8px 12px;}
+  }
+  @media(max-width:480px){
+    .header{padding:0 12px;height:56px;}
+    .header-title{font-size:12px;}
+    .upload-zone{margin:12px;padding:16px;}
+    .upload-icon{font-size:36px;}
+    .upload-text{font-size:12px;}
+    .main{padding:12px;}
+    .charts-grid{grid-template-columns:1fr;}
+    .stats-grid{grid-template-columns:1fr;}
+    .alerts{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <button class="back-btn" onclick="window.location.href='index.html'; return false;">← Portal</button>
+    <div class="header-title">Análisis de <span>Rotación</span></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="upload-zone" id="uploadZone">
+    <div class="upload-icon">📤</div>
+    <div class="upload-text">Cargá el archivo CSV de Stock</div>
+    <div class="upload-sub">Arrastrá o hacé clic para seleccionar</div>
+    <input type="file" id="fileInput" accept=".csv" />
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>Procesando datos...</p>
+  </div>
+
+  <div id="content" style="display:none;">
+    <div class="alerts" id="alerts"></div>
+    <div class="stats-grid" id="stats"></div>
+    <div class="charts-grid" id="charts"></div>
+    <div class="table-container">
+      <div class="table-title">Detalle por Ubicación</div>
+      <table id="detailTable">
+        <thead>
+          <tr>
+            <th>Ubicación</th>
+            <th>Clase</th>
+            <th>Rotación</th>
+            <th>Cantidad</th>
+            <th>% del Total</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Loginter · Dashboard de Rotación Visual · Análisis de Stock
+</div>
+
+<script>
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const loading = document.getElementById('loading');
+const content = document.getElementById('content');
+
+let chartInstances = [];
+
+// Drag and drop
+uploadZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadZone.classList.add('active');
+});
+
+uploadZone.addEventListener('dragleave', () => {
+  uploadZone.classList.remove('active');
+});
+
+uploadZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove('active');
+  const files = e.dataTransfer.files;
+  if (files.length) handleFile(files[0]);
+});
+
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+function handleFile(file) {
+  if (!file.name.endsWith('.csv')) {
+    alert('Por favor selecciona un archivo CSV');
+    return;
+  }
+  
+  loading.classList.add('active');
+  uploadZone.style.display = 'none';
+  content.style.display = 'none';
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csv = e.target.result;
+      const data = parseCSV(csv);
+      processData(data);
+      loading.classList.remove('active');
+      content.style.display = 'block';
+    } catch (error) {
+      alert('Error procesando archivo: ' + error.message);
+      loading.classList.remove('active');
+      uploadZone.style.display = 'block';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(csv) {
+  const lines = csv.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  const data = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim());
+    const row = {};
+    headers.forEach((header, idx) => {
+      row[header] = values[idx] || '';
+    });
+    data.push(row);
+  }
+  
+  return data;
+}
+
+function processData(data) {
+  // Análisis de rotación por clase de ubicación
+  const rotationByClass = {};
+  const rotationByClassAndType = {};
+  let totalCant = 0;
+  let typeAInAltura = 0;
+  let totalAltura = 0;
+  
+  data.forEach(row => {
+    const clase = row['Clase_Loc'] || 'Desconocido';
+    const rotacion = row['Rotacion'] || 'Sin Rotacion';
+    const cant = parseInt(row['Cant']) || 0;
+    
+    totalCant += cant;
+    
+    // Contabilizar por clase
+    if (!rotationByClass[clase]) {
+      rotationByClass[clase] = {};
+    }
+    rotationByClass[clase][rotacion] = (rotationByClass[clase][rotacion] || 0) + cant;
+    
+    // Contabilizar por clase y tipo de rotación
+    const key = `${clase}|${rotacion}`;
+    rotationByClassAndType[key] = (rotationByClassAndType[key] || 0) + cant;
+    
+    // Detectar alertas: Tipo A en Altura
+    if (clase === 'Altura' && rotacion === 'A') {
+      typeAInAltura += cant;
+      totalAltura += cant;
+    }
+    if (clase === 'Altura') {
+      totalAltura += cant;
+    }
+  });
+  
+  // Generar alertas
+  generateAlerts(typeAInAltura, totalAltura, totalCant);
+  
+  // Generar estadísticas
+  generateStats(rotationByClass, totalCant);
+  
+  // Generar gráficos
+  generateCharts(rotationByClass, data);
+  
+  // Generar tabla
+  generateTable(data, totalCant);
+}
+
+function generateAlerts(typeAInAltura, totalAltura, totalCant) {
+  const alertsDiv = document.getElementById('alerts');
+  alertsDiv.innerHTML = '';
+  
+  // Alerta de Tipo A en Altura
+  const percentageA = totalAltura > 0 ? (typeAInAltura / totalAltura * 100).toFixed(1) : 0;
+  const alertClass = percentageA > 30 ? 'alert-danger' : percentageA > 15 ? 'alert-warning' : 'alert-success';
+  const alertIcon = percentageA > 30 ? '⚠️' : percentageA > 15 ? '⚡' : '✅';
+  const alertTitle = percentageA > 30 ? 'ALERTA: Mucho Tipo A en Altura' : percentageA > 15 ? 'ATENCIÓN: Tipo A en Altura' : 'OK: Distribución Óptima';
+  
+  const alert = document.createElement('div');
+  alert.className = `alert ${alertClass}`;
+  alert.innerHTML = `
+    <div class="alert-icon">${alertIcon}</div>
+    <div class="alert-content">
+      <div class="alert-title">${alertTitle}</div>
+      <div class="alert-desc">${percentageA}% de rotación Tipo A está en posiciones de altura (${typeAInAltura} unidades de ${totalAltura})</div>
+    </div>
+  `;
+  alertsDiv.appendChild(alert);
+}
+
+function generateStats(rotationByClass, totalCant) {
+  const statsDiv = document.getElementById('stats');
+  statsDiv.innerHTML = '';
+  
+  const stats = [
+    { label: 'Total SKUs', value: totalCant },
+    { label: 'Clases de Ubicación', value: Object.keys(rotationByClass).length },
+    { label: 'Tipo A', value: Object.values(rotationByClass).reduce((sum, types) => sum + (types['A'] || 0), 0) },
+    { label: 'Tipo B', value: Object.values(rotationByClass).reduce((sum, types) => sum + (types['B'] || 0), 0) },
+  ];
+  
+  stats.forEach(stat => {
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    card.innerHTML = `
+      <div class="stat-value">${stat.value}</div>
+      <div class="stat-label">${stat.label}</div>
+    `;
+    statsDiv.appendChild(card);
+  });
+}
+
+function generateCharts(rotationByClass, data) {
+  const chartsDiv = document.getElementById('charts');
+  chartsDiv.innerHTML = '';
+  
+  // Gráfico 1: Distribución de Rotación por Clase
+  const chartContainer1 = document.createElement('div');
+  chartContainer1.className = 'chart-card';
+  chartContainer1.innerHTML = '<div class="chart-title">Distribución de Rotación por Clase de Ubicación</div><canvas id="chart1"></canvas>';
+  chartsDiv.appendChild(chartContainer1);
+  
+  const classes = Object.keys(rotationByClass);
+  const rotationTypes = ['A', 'B', 'C', 'Sin Rotacion'];
+  const datasets = rotationTypes.map((type, idx) => ({
+    label: `Tipo ${type}`,
+    data: classes.map(cls => rotationByClass[cls][type] || 0),
+    backgroundColor: ['#c81e1e', '#d97706', '#057a55', '#9ca3af'][idx],
+  }));
+  
+  const ctx1 = document.getElementById('chart1').getContext('2d');
+  chartInstances.push(new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: classes,
+      datasets: datasets,
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { beginAtZero: true } },
+    },
+  }));
+  
+  // Gráfico 2: Porcentaje de Rotación Total
+  const rotationTotals = {};
+  rotationTypes.forEach(type => {
+    rotationTotals[type] = Object.values(rotationByClass).reduce((sum, types) => sum + (types[type] || 0), 0);
+  });
+  
+  const chartContainer2 = document.createElement('div');
+  chartContainer2.className = 'chart-card';
+  chartContainer2.innerHTML = '<div class="chart-title">Porcentaje de Rotación Total</div><canvas id="chart2"></canvas>';
+  chartsDiv.appendChild(chartContainer2);
+  
+  const ctx2 = document.getElementById('chart2').getContext('2d');
+  chartInstances.push(new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: rotationTypes,
+      datasets: [{
+        data: rotationTypes.map(type => rotationTotals[type]),
+        backgroundColor: ['#c81e1e', '#d97706', '#057a55', '#9ca3af'],
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } },
+    },
+  }));
+}
+
+function generateTable(data, totalCant) {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  
+  data.slice(0, 20).forEach(row => {
+    const tr = document.createElement('tr');
+    const rotacion = row['Rotacion'] || 'Sin Rotacion';
+    const badgeClass = rotacion === 'A' ? 'badge-a' : rotacion === 'B' ? 'badge-b' : rotacion === 'C' ? 'badge-c' : 'badge-sin';
+    const cant = parseInt(row['Cant']) || 0;
+    const percentage = ((cant / totalCant) * 100).toFixed(2);
+    
+    tr.innerHTML = `
+      <td>${row['LOC']}</td>
+      <td>${row['Clase_Loc']}</td>
+      <td><span class="badge ${badgeClass}">${rotacion}</span></td>
+      <td>${cant}</td>
+      <td>${percentage}%</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+</script>
+</body>
+</html>

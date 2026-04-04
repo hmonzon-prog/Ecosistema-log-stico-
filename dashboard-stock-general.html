@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock General — Loginter</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#f0f2f5; --surface:#ffffff; --surface2:#f7f8fa; --border:#e2e6ea;
+    --accent:#1a56db; --green:#057a55; --red:#c81e1e; --yellow:#d97706; --orange:#ea580c;
+    --text:#111827; --muted:#6b7280;
+    --font-display:'Barlow Condensed',sans-serif;
+    --font-body:'Barlow',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;}
+
+  /* HEADER */
+  .header{
+    background:#fff;border-bottom:3px solid var(--accent);
+    padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between;
+    box-shadow:0 2px 8px rgba(0,0,0,0.06);position:sticky;top:0;z-index:100;
+  }
+  .header-left{display:flex;align-items:center;gap:16px;}
+  .back-btn{
+    display:flex;align-items:center;gap:6px;color:var(--accent);font-size:13px;
+    font-weight:600;text-decoration:none;padding:6px 12px;border-radius:8px;
+    border:1px solid #dbeafe;background:#eff6ff;transition:all 0.2s;
+  }
+  .back-btn:hover{background:#dbeafe;}
+  .header-title{font-family:var(--font-display);font-size:20px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+  .header-title span{color:var(--accent);}
+  .header-right{display:flex;align-items:center;gap:12px;}
+  .update-badge{
+    display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
+    background:var(--surface2);border:1px solid var(--border);padding:5px 12px;border-radius:20px;
+  }
+  .dot-live{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+  /* LOADING */
+  .loading-screen{
+    position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;z-index:999;transition:opacity 0.5s;
+  }
+  .loading-screen.hidden{opacity:0;pointer-events:none;}
+  .loader{width:48px;height:48px;border:4px solid #e2e6ea;border-top-color:var(--accent);
+    border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:16px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--muted);letter-spacing:1px;}
+
+  /* HERO */
+  .hero{
+    background:linear-gradient(135deg,#1a56db 0%,#1e429f 100%);
+    padding:36px 40px 32px;color:#fff;position:relative;overflow:hidden;
+  }
+  .hero::before{content:'';position:absolute;right:-60px;top:-60px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,0.04);}
+  .hero-label{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;opacity:0.7;margin-bottom:8px;}
+  .hero-title{font-family:var(--font-display);font-size:40px;font-weight:900;line-height:1;margin-bottom:8px;letter-spacing:1px;}
+  .hero-sub{font-size:14px;opacity:0.8;}
+  .kpi-row{display:flex;gap:24px;margin-top:28px;flex-wrap:wrap;}
+  .kpi{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:16px 24px;min-width:160px;}
+  .kpi-val{font-family:var(--font-display);font-size:30px;font-weight:900;line-height:1;}
+  .kpi-label{font-size:11px;opacity:0.7;margin-top:4px;letter-spacing:0.5px;}
+  .kpi-sub{font-size:11px;opacity:0.5;margin-top:2px;}
+
+  /* MAIN */
+  .main{padding:32px 40px;display:flex;flex-direction:column;gap:28px;}
+  .section-label{
+    font-family:var(--font-display);font-size:11px;font-weight:700;
+    letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:16px;
+  }
+
+  /* GRIDS */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+
+  /* CARDS */
+  .card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:24px;animation:fadeUp 0.5s ease both;}
+  .card-title{font-family:var(--font-display);font-size:17px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;}
+  .card-sub{font-size:12px;color:var(--muted);margin-bottom:20px;}
+  .chart-wrap{position:relative;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+  /* TABLA MARCAS */
+  .marca-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .marca-table th{text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:0 12px 10px;border-bottom:2px solid var(--border);}
+  .marca-table th.r{text-align:right;}
+  .marca-table td{padding:10px 12px;border-bottom:1px solid var(--surface2);}
+  .marca-table td.r{text-align:right;font-variant-numeric:tabular-nums;}
+  .marca-table tr:last-child td{border-bottom:none;}
+  .marca-table tr:hover td{background:var(--surface2);}
+  .marca-name{font-weight:700;font-family:var(--font-display);font-size:15px;letter-spacing:0.3px;}
+  .bar-mini{height:5px;border-radius:3px;background:var(--accent);margin-top:4px;transition:width 0.8s ease;}
+
+  /* BADGE ROT */
+  .rot-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:0.5px;}
+  .rot-a{background:#dcfce7;color:#166534;}
+  .rot-b{background:#dbeafe;color:#1e40af;}
+  .rot-c{background:#fef9c3;color:#854d0e;}
+  .rot-n{background:#f1f5f9;color:#64748b;}
+
+  /* HOLD INDICATOR */
+  .hold-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:6px;}
+  .hold-ok{background:var(--green);}
+  .hold-hold{background:var(--red);}
+
+  /* TOP SIN ROT TABLE */
+  .sinrot-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .sinrot-table th{text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:0 10px 10px;border-bottom:2px solid var(--border);}
+  .sinrot-table th.r{text-align:right;}
+  .sinrot-table td{padding:9px 10px;border-bottom:1px solid var(--surface2);vertical-align:middle;}
+  .sinrot-table td.r{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;}
+  .sinrot-table tr:last-child td{border-bottom:none;}
+  .sinrot-table tr:hover td{background:var(--surface2);}
+  .sku-code{font-family:monospace;font-size:11px;color:var(--muted);display:block;}
+
+  /* STAT PILLS */
+  .stat-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+  .stat-pill{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;flex:1;min-width:100px;}
+  .stat-pill-val{font-family:var(--font-display);font-size:22px;font-weight:900;}
+  .stat-pill-label{font-size:11px;color:var(--muted);margin-top:2px;}
+
+  /* UBICACION */
+  .ubic-list{display:flex;flex-direction:column;gap:10px;}
+  .ubic-row{display:flex;align-items:center;gap:12px;}
+  .ubic-name{font-weight:600;font-size:13px;min-width:110px;}
+  .ubic-bar-wrap{flex:1;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden;}
+  .ubic-bar{height:100%;border-radius:5px;background:var(--accent);transition:width 1s ease;}
+  .ubic-val{font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted);min-width:80px;text-align:right;}
+
+  /* FOOTER */
+  .footer{text-align:center;padding:20px;color:var(--muted);font-size:11px;border-top:1px solid var(--border);background:#fff;letter-spacing:0.5px;}
+
+  /* RESPONSIVE */
+  @media(max-width:900px){
+    .grid-2,.grid-3{grid-template-columns:1fr;}
+    .kpi-row{gap:12px;}
+    .main{padding:20px;}
+    .hero{padding:24px 20px;}
+  }
+
+  @media(max-width:600px){
+    .header{padding:0 16px;height:56px;}
+    .header-title{font-size:16px;}
+    .back-btn{padding:4px 10px;font-size:11px;}
+    .hero{padding:20px 16px;}
+    .hero-title{font-size:28px;}
+    .kpi{padding:12px 16px;min-width:120px;}
+    .kpi-val{font-size:24px;}
+    .main{padding:16px;}
+    .card{padding:16px;}
+    .card-title{font-size:14px;}
+    .marca-table th{font-size:9px;padding:0 8px 8px;}
+    .marca-table td{padding:8px;font-size:11px;}
+  }
+  @media(max-width:400px){
+    .header{padding:0 12px;}
+    .header-title{font-size:14px;}
+    .hero{padding:16px 12px;}
+    .hero-title{font-size:22px;}
+    .hero-sub{font-size:12px;}
+    .kpi{padding:10px 12px;min-width:100px;}
+    .kpi-val{font-size:20px;}
+    .kpi-label{font-size:10px;}
+    .main{padding:12px;}
+    .card{padding:12px;}
+    .card-title{font-size:12px;}
+    .marca-table{font-size:10px;}
+    .marca-table th{font-size:8px;padding:0 6px 6px;}
+    .marca-table td{padding:6px;}
+  }
+
+  /* COLOR PALETTE MARCAS */
+  .m0{color:#1a56db} .m1{color:#057a55} .m2{color:#d97706} .m3{color:#7c3aed}
+  .m4{color:#c81e1e} .m5{color:#0891b2} .m6{color:#059669} .m7{color:#db2777}
+  .m8{color:#ea580c} .m9{color:#4f46e5}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loader"></div>
+  <div class="loading-text">Cargando stock...</div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <button class="back-btn" onclick="window.location.href='index.html'; return false;" style="border:none;cursor:pointer;background:#eff6ff;color:var(--accent);">← Portal</button>
+    <div class="header-title">Stock <span>General</span></div>
+  </div>
+  <div class="header-right">
+    <div class="update-badge">
+      <div class="dot-live"></div>
+      <span id="lastUpdate">Actualizando...</span>
+    </div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">Operación CMA · Loginter</div>
+  <div class="hero-title">Stock General</div>
+  <div class="hero-sub">Visibilidad completa del inventario por marca, estado y rotación.</div>
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-val" id="kpiTotal">—</div>
+      <div class="kpi-label">Unidades Totales</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" id="kpiDisp">—</div>
+      <div class="kpi-label">Disponible</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" id="kpiHold">—</div>
+      <div class="kpi-label">HOLD</div>
+      <div class="kpi-sub" id="kpiHoldPct">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" id="kpiSKUs">—</div>
+      <div class="kpi-label">SKUs únicos</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" id="kpiMarcas">—</div>
+      <div class="kpi-label">Marcas</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- FILA 1: Gráfico marcas + Estado OK/HOLD -->
+  <div class="grid-2">
+
+    <div class="card" style="animation-delay:0.1s">
+      <div class="card-title">Stock por Marca</div>
+      <div class="card-sub">Top 10 marcas por cantidad de unidades</div>
+      <div class="chart-wrap"><canvas id="chartMarcas" height="280"></canvas></div>
+    </div>
+
+    <div class="card" style="animation-delay:0.15s">
+      <div class="card-title">Estado del Stock</div>
+      <div class="card-sub">Distribución OK vs HOLD por marca</div>
+      <div class="chart-wrap"><canvas id="chartEstado" height="280"></canvas></div>
+    </div>
+
+  </div>
+
+  <!-- FILA 2: Rotación + Ubicación -->
+  <div class="grid-2">
+
+    <div class="card" style="animation-delay:0.2s">
+      <div class="card-title">Rotación del Stock</div>
+      <div class="card-sub">Clasificación A / B / C / Sin Rotación</div>
+      <div class="chart-wrap" style="max-width:320px;margin:0 auto"><canvas id="chartRotacion" height="260"></canvas></div>
+      <div class="stat-row" style="margin-top:20px;" id="rotStats"></div>
+    </div>
+
+    <div class="card" style="animation-delay:0.25s">
+      <div class="card-title">Stock por Tipo de Ubicación</div>
+      <div class="card-sub">Unidades por clase de ubicación en el depósito</div>
+      <div class="ubic-list" id="ubicList"></div>
+    </div>
+
+  </div>
+
+  <!-- FILA 3: Tabla detalle marcas -->
+  <div class="card" style="animation-delay:0.3s">
+    <div class="card-title">Detalle por Marca</div>
+    <div class="card-sub">Stock total, disponible, HOLD y SKUs por marca</div>
+    <div style="overflow-x:auto">
+      <table class="marca-table" id="marcaTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Marca</th>
+            <th class="r">Total uds</th>
+            <th class="r">Disponible</th>
+            <th class="r">HOLD</th>
+            <th class="r">SKUs</th>
+            <th class="r">Rot. A</th>
+            <th class="r">Rot. B</th>
+            <th class="r">Rot. C</th>
+            <th class="r">Sin Rot.</th>
+          </tr>
+        </thead>
+        <tbody id="marcaBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FILA 4: Top SKUs sin rotación -->
+  <div class="card" style="animation-delay:0.35s">
+    <div class="card-title">Top SKUs Sin Rotación</div>
+    <div class="card-sub">Los 15 SKUs con mayor cantidad de unidades sin movimiento</div>
+    <div style="overflow-x:auto">
+      <table class="sinrot-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>SKU</th>
+            <th>Descripción</th>
+            <th>Marca</th>
+            <th class="r">Unidades</th>
+          </tr>
+        </thead>
+        <tbody id="sinRotBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Loginter · Stock General · Operación CMA · <span id="footerFecha"></span>
+</div>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────────────────────────
+const SHEET_ID = '1qnI-hGlXTMMJ9J5xC4Yi_21vqp9Nhxsfk4MSY34UAL0';
+const SHEET_GID = '0';
+
+const PALETTE = [
+  '#1a56db','#057a55','#d97706','#7c3aed','#c81e1e',
+  '#0891b2','#059669','#db2777','#ea580c','#4f46e5',
+  '#6b7280','#84cc16','#f59e0b','#14b8a6','#8b5cf6'
+];
+
+// ─── PARSE GVIZ ──────────────────────────────────────────────────────────────
+// Columnas: 0=Propietario,1=LOC,2=Clase Loc,3=SKU,4=Descrip,5=Cant,6=Asignado,7=Preparado,8=Disponible,9=Lote Infor,10=Estado,11=LPN,12=Canal,13=Marca,14=Rotacion
+const COL = {PROPIETARIO:0,LOC:1,CLASE:2,SKU:3,DESCRIP:4,CANT:5,ASIGNADO:6,PREPARADO:7,DISPONIBLE:8,LOTE:9,ESTADO:10,LPN:11,CANAL:12,MARCA:13,ROTACION:14};
+
+function parseGviz(resp) {
+  if (!resp || !resp.table || !resp.table.rows) return [];
+  return resp.table.rows.map(row => {
+    const c = row.c || [];
+    const get = i => (c[i] && c[i].v !== null && c[i].v !== undefined) ? String(c[i].v) : '';
+    return {
+      'Propietario': get(COL.PROPIETARIO),
+      'LOC':         get(COL.LOC),
+      'Clase Loc':   get(COL.CLASE),
+      'SKU':         get(COL.SKU),
+      'Descrip':     get(COL.DESCRIP),
+      'Cant':        get(COL.CANT),
+      'Asignado':    get(COL.ASIGNADO),
+      'Preparado':   get(COL.PREPARADO),
+      'Disponible':  get(COL.DISPONIBLE),
+      'Lote Infor':  get(COL.LOTE),
+      'Estado':      get(COL.ESTADO),
+      'LPN':         get(COL.LPN),
+      'Canal':       get(COL.CANAL),
+      'Marca':       get(COL.MARCA),
+      'Rotacion':    get(COL.ROTACION),
+    };
+  });
+}
+
+// ─── PROCESS DATA ────────────────────────────────────────────────────────────
+function processData(rows) {
+  const marcas = {};
+  const clases = {};
+  const skuSinRot = {};
+  let totalCant = 0, totalDisp = 0, totalHold = 0;
+  const skusUnicos = new Set();
+
+  for (const r of rows) {
+    const marca = String(r['Marca'] ?? '').trim() || 'SIN MARCA';
+    const clase = String(r['Clase Loc'] ?? '').trim() || '';
+    const estado = String(r['Estado'] ?? '').trim() || '';
+    const rot = String(r['Rotacion'] ?? '').trim().toLowerCase();
+    const sku = String(r['SKU'] ?? '').trim() || '';
+    const cant = parseFloat(r['Cant']) || 0;
+    const disp = parseFloat(r['Disponible']) || 0;
+
+    totalCant += cant;
+    totalDisp += disp;
+    skusUnicos.add(sku);
+
+    if (!marcas[marca]) marcas[marca] = {cant:0,disp:0,hold:0,ok:0,skus:new Set(),rotA:0,rotB:0,rotC:0,sinRot:0};
+    marcas[marca].cant += cant;
+    marcas[marca].disp += disp;
+    marcas[marca].skus.add(sku);
+    if (estado === 'HOLD') { marcas[marca].hold += cant; totalHold += cant; }
+    else marcas[marca].ok += cant;
+
+    if (rot === 'a') marcas[marca].rotA += cant;
+    else if (rot === 'b') marcas[marca].rotB += cant;
+    else if (rot === 'c') marcas[marca].rotC += cant;
+    else {
+      marcas[marca].sinRot += cant;
+      if (!skuSinRot[sku]) skuSinRot[sku] = {cant:0, descrip:r['Descrip']?.trim()||'', marca};
+      skuSinRot[sku].cant += cant;
+    }
+
+    if (!clases[clase]) clases[clase] = {cant:0, disp:0};
+    clases[clase].cant += cant;
+    clases[clase].disp += disp;
+  }
+
+  const marcasArr = Object.entries(marcas)
+    .map(([m,v]) => ({marca:m, cant:v.cant, disp:v.disp, hold:v.hold, ok:v.ok,
+      skus:v.skus.size, rotA:v.rotA, rotB:v.rotB, rotC:v.rotC, sinRot:v.sinRot}))
+    .sort((a,b) => b.cant - a.cant);
+
+  const clasesArr = Object.entries(clases)
+    .map(([c,v]) => ({clase:c, cant:v.cant, disp:v.disp}))
+    .sort((a,b) => b.cant - a.cant);
+
+  const topSinRot = Object.entries(skuSinRot)
+    .map(([sku,v]) => ({sku, ...v}))
+    .sort((a,b) => b.cant - a.cant)
+    .slice(0,15);
+
+  return {marcasArr, clasesArr, topSinRot, totalCant, totalDisp, totalHold, skusUnicos: skusUnicos.size, marcasCount: marcasArr.length};
+}
+
+// ─── FORMAT ──────────────────────────────────────────────────────────────────
+const fmt = n => n?.toLocaleString('es-AR') ?? '—';
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render(data) {
+  const {marcasArr, clasesArr, topSinRot, totalCant, totalDisp, totalHold, skusUnicos, marcasCount} = data;
+
+  // KPIs
+  document.getElementById('kpiTotal').textContent = fmt(Math.round(totalCant));
+  document.getElementById('kpiDisp').textContent = fmt(Math.round(totalDisp));
+  document.getElementById('kpiHold').textContent = fmt(Math.round(totalHold));
+  document.getElementById('kpiHoldPct').textContent = ((totalHold/totalCant)*100).toFixed(1)+'% del total';
+  document.getElementById('kpiSKUs').textContent = fmt(skusUnicos);
+  document.getElementById('kpiMarcas').textContent = marcasCount;
+
+  const top10 = marcasArr.slice(0,10);
+
+  // ── Chart 1: Marcas (barras horizontales) ──
+  new Chart(document.getElementById('chartMarcas'), {
+    type: 'bar',
+    data: {
+      labels: top10.map(m => m.marca),
+      datasets: [{
+        label: 'Unidades',
+        data: top10.map(m => m.cant),
+        backgroundColor: top10.map((_,i) => PALETTE[i]),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: {display:false},
+        tooltip: {callbacks:{label: ctx => ' '+fmt(ctx.raw)+' uds'}}
+      },
+      scales: {
+        x: {grid:{color:'#f0f2f5'}, ticks:{callback: v => (v/1000).toFixed(0)+'k', font:{size:11}}},
+        y: {grid:{display:false}, ticks:{font:{size:12,weight:'600'}}}
+      }
+    }
+  });
+
+  // ── Chart 2: Estado OK/HOLD (stacked bar) ──
+  new Chart(document.getElementById('chartEstado'), {
+    type: 'bar',
+    data: {
+      labels: top10.map(m => m.marca),
+      datasets: [
+        {label:'OK', data: top10.map(m => m.ok), backgroundColor:'#057a55', borderRadius:4, borderSkipped:false},
+        {label:'HOLD', data: top10.map(m => m.hold), backgroundColor:'#c81e1e', borderRadius:4, borderSkipped:false},
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: {position:'bottom', labels:{font:{size:12}, boxWidth:12}},
+        tooltip: {callbacks:{label: ctx => ' '+ctx.dataset.label+': '+fmt(ctx.raw)+' uds'}}
+      },
+      scales: {
+        x: {stacked:true, grid:{color:'#f0f2f5'}, ticks:{callback: v => (v/1000).toFixed(0)+'k', font:{size:11}}},
+        y: {stacked:true, grid:{display:false}, ticks:{font:{size:12,weight:'600'}}}
+      }
+    }
+  });
+
+  // ── Chart 3: Rotación (donut) ──
+  let rotA=0,rotB=0,rotC=0,sinRot=0;
+  for (const m of marcasArr) { rotA+=m.rotA; rotB+=m.rotB; rotC+=m.rotC; sinRot+=m.sinRot; }
+  new Chart(document.getElementById('chartRotacion'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Rotación A','Rotación B','Rotación C','Sin Rotación'],
+      datasets: [{
+        data: [rotA,rotB,rotC,sinRot],
+        backgroundColor: ['#057a55','#1a56db','#d97706','#9ca3af'],
+        borderWidth: 2, borderColor: '#fff',
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      cutout: '65%',
+      responsive: true,
+      plugins: {
+        legend: {position:'bottom', labels:{font:{size:12}, boxWidth:12, padding:12}},
+        tooltip: {callbacks:{label: ctx => ' '+ctx.label+': '+fmt(Math.round(ctx.raw))+' uds ('+((ctx.raw/(rotA+rotB+rotC+sinRot))*100).toFixed(1)+'%)'}}
+      }
+    }
+  });
+
+  // Stat pills rotación
+  const total = rotA+rotB+rotC+sinRot;
+  const rotStats = document.getElementById('rotStats');
+  const pills = [
+    {label:'Rot. A', val:rotA, color:'#057a55'},
+    {label:'Rot. B', val:rotB, color:'#1a56db'},
+    {label:'Rot. C', val:rotC, color:'#d97706'},
+    {label:'Sin Rot.', val:sinRot, color:'#9ca3af'},
+  ];
+  rotStats.innerHTML = pills.map(p => `
+    <div class="stat-pill">
+      <div class="stat-pill-val" style="color:${p.color}">${((p.val/total)*100).toFixed(1)}%</div>
+      <div class="stat-pill-label">${p.label}</div>
+    </div>`).join('');
+
+  // ── Ubicaciones ──
+  const maxUbic = clasesArr[0]?.cant || 1;
+  const ubicList = document.getElementById('ubicList');
+  ubicList.innerHTML = clasesArr.map(c => `
+    <div class="ubic-row">
+      <div class="ubic-name">${c.clase}</div>
+      <div class="ubic-bar-wrap">
+        <div class="ubic-bar" style="width:${(c.cant/maxUbic*100).toFixed(1)}%"></div>
+      </div>
+      <div class="ubic-val">${fmt(Math.round(c.cant))} uds</div>
+    </div>`).join('');
+
+  // ── Tabla marcas ──
+  const maxCant = marcasArr[0]?.cant || 1;
+  const tbody = document.getElementById('marcaBody');
+  tbody.innerHTML = marcasArr.map((m,i) => `
+    <tr>
+      <td style="color:var(--muted);font-size:12px">${i+1}</td>
+      <td>
+        <div class="marca-name">${m.marca}</div>
+        <div class="bar-mini" style="width:${Math.max((m.cant/maxCant*100),2).toFixed(1)}%;background:${PALETTE[i%PALETTE.length]}"></div>
+      </td>
+      <td class="r"><strong>${fmt(Math.round(m.cant))}</strong></td>
+      <td class="r">${fmt(Math.round(m.disp))}</td>
+      <td class="r" style="color:${m.hold>0?'var(--red)':'var(--muted)'}">${fmt(Math.round(m.hold))}</td>
+      <td class="r">${fmt(m.skus)}</td>
+      <td class="r"><span class="rot-badge rot-a">${fmt(Math.round(m.rotA))}</span></td>
+      <td class="r"><span class="rot-badge rot-b">${fmt(Math.round(m.rotB))}</span></td>
+      <td class="r"><span class="rot-badge rot-c">${fmt(Math.round(m.rotC))}</span></td>
+      <td class="r"><span class="rot-badge rot-n">${fmt(Math.round(m.sinRot))}</span></td>
+    </tr>`).join('');
+
+  // ── Top Sin Rotación ──
+  const sinRotBody = document.getElementById('sinRotBody');
+  sinRotBody.innerHTML = topSinRot.map((s,i) => `
+    <tr>
+      <td style="color:var(--muted);font-size:11px">${i+1}</td>
+      <td>
+        <span class="sku-code">${s.sku}</span>
+        <strong style="font-size:13px">${s.descrip}</strong>
+      </td>
+      <td>${s.marca}</td>
+      <td class="r">${fmt(Math.round(s.cant))}</td>
+    </tr>`).join('');
+
+  // Fecha
+  const ahora = new Date();
+  const opts = {weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'};
+  const fStr = ahora.toLocaleDateString('es-AR', opts);
+  document.getElementById('lastUpdate').textContent = 'Actualizado: '+fStr;
+  document.getElementById('footerFecha').textContent = ahora.toLocaleDateString('es-AR',{year:'numeric',month:'long',day:'numeric'});
+}
+
+// ─── FETCH & INIT ────────────────────────────────────────────────────────────
+function fetchData() {
+  // Limpiar script anterior si existe
+  const old = document.getElementById('gviz-stock');
+  if (old) old.remove();
+
+  window.__gvizStockCallback = function(resp) {
+    try {
+      if (resp && resp.status === 'error') throw new Error(resp.errors?.[0]?.message || 'Error Google Sheets');
+      if (!resp || !resp.table || !resp.table.rows || !resp.table.rows.length) throw new Error('Hoja vacía o sin datos');
+      const rows = parseGviz(resp);
+      const data = processData(rows);
+      render(data);
+      const ls = document.getElementById('loadingScreen');
+      if (ls) { ls.classList.add('hidden'); setTimeout(() => ls.remove(), 600); }
+    } catch(e) {
+      console.error(e);
+      const lt = document.querySelector('.loading-text');
+      if (lt) lt.textContent = 'Error al procesar datos';
+    }
+  };
+
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=select%20*&gid=${SHEET_GID}&tqx=out:json;responseHandler:__gvizStockCallback`;
+  const s = document.createElement('script');
+  s.id = 'gviz-stock';
+  s.src = url;
+  s.onerror = () => {
+    const lt = document.querySelector('.loading-text');
+    if (lt) lt.textContent = 'Error al cargar datos';
+  };
+  document.head.appendChild(s);
+}
+
+fetchData();
+// Auto-refresh cada 5 minutos
+setInterval(fetchData, 5 * 60 * 1000);
+</script>
+</body>
+</html>

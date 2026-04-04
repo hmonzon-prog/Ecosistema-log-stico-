@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ocupación del Depósito — Loginter</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#f0f2f5; --surface:#fff; --surface2:#f7f8fa; --border:#e2e6ea;
+    --accent:#1a56db; --green:#057a55; --red:#c81e1e; --yellow:#d97706;
+    --text:#111827; --muted:#6b7280;
+    --font-display:'Barlow Condensed',sans-serif;
+    --font-body:'Barlow',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;}
+
+  .loading-screen{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity 0.5s;}
+  .loading-screen.hidden{opacity:0;pointer-events:none;}
+  .loader{width:48px;height:48px;border:4px solid #e2e6ea;border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:16px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--muted);letter-spacing:1px;}
+
+  .header{background:#fff;border-bottom:3px solid var(--accent);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.06);position:sticky;top:0;z-index:100;}
+  .header-left{display:flex;align-items:center;gap:14px;}
+  .back-btn{display:flex;align-items:center;gap:6px;color:var(--accent);font-size:13px;font-weight:600;text-decoration:none;padding:6px 12px;border-radius:8px;border:1px solid #dbeafe;background:#eff6ff;transition:all 0.2s;}
+  .back-btn:hover{background:#dbeafe;}
+  .header-title{font-family:var(--font-display);font-size:20px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+  .header-title span{color:var(--accent);}
+  .update-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:5px 12px;border-radius:20px;}
+  .dot-live{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+  .hero{background:linear-gradient(135deg,#1a56db 0%,#1e429f 100%);padding:24px 32px;color:#fff;}
+  .hero-label{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;opacity:0.7;margin-bottom:6px;}
+  .hero-title{font-family:var(--font-display);font-size:34px;font-weight:900;line-height:1;letter-spacing:1px;}
+
+  .page{display:flex;gap:0;min-height:calc(100vh - 130px);}
+
+  /* SIDEBAR */
+  .sidebar{width:210px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:18px;}
+  .filter-group-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+  .filter-btn{display:block;width:100%;text-align:left;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);font-size:12px;font-weight:500;cursor:pointer;margin-bottom:4px;transition:all 0.15s;color:var(--text);font-family:var(--font-body);}
+  .filter-btn:hover{border-color:var(--accent);background:#eff6ff;color:var(--accent);}
+  .filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;}
+  .reset-btn{display:block;width:100%;padding:8px;border-radius:7px;border:1px solid var(--border);background:#fff;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);text-align:center;transition:all 0.15s;font-family:var(--font-body);}
+  .reset-btn:hover{border-color:var(--red);color:var(--red);}
+
+  /* CONTENT */
+  .content{flex:1;padding:20px 24px;display:flex;flex-direction:column;gap:16px;overflow:hidden;}
+
+  /* KPI GLOBAL */
+  .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+  .kpi-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-align:center;animation:fadeUp 0.4s ease both;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .kpi-val{font-family:var(--font-display);font-size:26px;font-weight:900;line-height:1;margin-bottom:4px;}
+  .kpi-label{font-size:11px;color:var(--muted);}
+  .kpi-box.blue .kpi-val{color:var(--accent);}
+  .kpi-box.green .kpi-val{color:var(--green);}
+  .kpi-box.orange .kpi-val{color:#ea580c;}
+
+  /* TIPO BLOCKS */
+  .tipo-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .tipo-block{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;animation:fadeUp 0.4s ease both;animation-delay:0.1s;}
+  .tipo-block-name{font-family:var(--font-display);font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+  .tipo-pct-badge{font-size:13px;padding:3px 10px;border-radius:6px;background:#eff6ff;color:var(--accent);font-weight:800;}
+  .tipo-kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+  .tipo-kpi-val{font-family:var(--font-display);font-size:22px;font-weight:900;text-align:center;}
+  .tipo-kpi-label{font-size:10px;color:var(--muted);text-align:center;margin-top:2px;}
+  .tipo-bar{height:10px;border-radius:5px;overflow:hidden;display:flex;background:#e5e7eb;}
+
+  /* CHART */
+  .chart-block{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;animation:fadeUp 0.4s ease both;animation-delay:0.15s;}
+  .block-title{font-family:var(--font-display);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;color:var(--text);}
+
+  /* TABLA */
+  .tabla-block{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;animation:fadeUp 0.4s ease both;animation-delay:0.2s;}
+  .tabla-top{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .tabla-top-title{font-family:var(--font-display);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;}
+  .tabla-count{font-size:12px;color:var(--muted);}
+  .tabla-wrap{overflow:auto;max-height:300px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  thead th{position:sticky;top:0;background:#f7f8fa;text-align:left;padding:8px 14px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);}
+  tbody td{padding:7px 14px;border-bottom:1px solid var(--surface2);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover td{background:var(--surface2);}
+  .badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;}
+  .b-ocup{background:#dbeafe;color:#1e40af;}
+  .b-vacia{background:#dcfce7;color:#166534;}
+  .b-ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
+  .b-nook{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;}
+
+  .footer{text-align:center;padding:14px;color:var(--muted);font-size:11px;border-top:1px solid var(--border);background:#fff;}
+
+  @media(max-width:1000px){
+    .kpi-row{grid-template-columns:repeat(3,1fr);}
+    .tipo-row{grid-template-columns:1fr;}
+  }
+  @media(max-width:700px){
+    .page{flex-direction:column;}
+    .sidebar{width:100%;padding:12px;}
+    .header{padding:0 16px;height:60px;}
+    .header-title{font-size:16px;}
+    .back-btn{padding:4px 10px;font-size:12px;}
+    .hero{padding:20px 16px;}
+    .hero-title{font-size:28px;}
+    .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px;padding:12px 16px;}
+    .kpi-box{padding:10px 12px;}
+    .kpi-val{font-size:20px;}
+    .content{padding:12px;gap:12px;}
+    .tipo-block{padding:12px;}
+    .tipo-block-name{font-size:14px;}
+    .tabla-wrap{max-height:300px;}
+    table{font-size:11px;}
+  }
+  @media(max-width:480px){
+    .header{padding:0 12px;height:56px;}
+    .header-title{font-size:14px;}
+    .hero{padding:16px 12px;}
+    .hero-title{font-size:22px;}
+    .kpi-row{grid-template-columns:1fr;gap:6px;padding:10px 12px;}
+    .kpi-box{padding:8px 10px;}
+    .kpi-val{font-size:18px;}
+    .sidebar{padding:10px;gap:10px;}
+    .filter-btn{padding:5px 8px;font-size:10px;}
+    .content{padding:10px;gap:10px;}
+    .tipo-block{padding:10px;}
+    .tipo-block-name{font-size:12px;}
+    .tabla-wrap{max-height:250px;}
+    table{font-size:10px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="loader"></div>
+  <div class="loading-text">Cargando ocupación...</div>
+</div>
+
+<div class="header">
+  <div class="header-left">
+    <button class="back-btn" onclick="window.location.href='index.html'; return false;" style="border:none;cursor:pointer;background:#eff6ff;color:var(--accent);">← Portal</button>
+    <div class="header-title">Ocupación del <span>Depósito</span></div>
+  </div>
+  <div class="update-badge">
+    <div class="dot-live"></div>
+    <span id="lastUpdate">Actualizando...</span>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="hero-label">Operación CMA · Loginter</div>
+  <div class="hero-title">Ocupación del Depósito</div>
+</div>
+
+<!-- KPIs GLOBALES SIEMPRE ARRIBA -->
+<div style="background:#fff;border-bottom:1px solid var(--border);padding:16px 32px;display:flex;gap:12px;align-items:stretch">
+  <div class="kpi-box blue" style="flex:1;animation-delay:0s">
+    <div class="kpi-val" id="kpiTotal">—</div>
+    <div class="kpi-label">Posiciones Totales</div>
+  </div>
+  <div class="kpi-box" style="flex:1;animation-delay:0.05s">
+    <div class="kpi-val" id="kpiOcup">—</div>
+    <div class="kpi-label">Posiciones Ocupadas</div>
+  </div>
+  <div class="kpi-box" style="flex:1;animation-delay:0.1s">
+    <div class="kpi-val" id="kpiVacia">—</div>
+    <div class="kpi-label">Posiciones Vacías</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:3px">Vacías OK + Vacías NOOK</div>
+  </div>
+  <div class="kpi-box blue" style="flex:1;animation-delay:0.15s">
+    <div class="kpi-val" id="kpiPct">—</div>
+    <div class="kpi-label">% Ocupación general</div>
+  </div>
+  <div class="kpi-box orange" style="flex:1;animation-delay:0.2s">
+    <div class="kpi-val" id="kpiNook">—</div>
+    <div class="kpi-label">Posiciones No Disponibles</div>
+    <div style="font-size:10px;color:#ea580c;margin-top:3px">Vacías NOOK (no se pueden usar)</div>
+  </div>
+  <div class="kpi-box green" style="flex:1;animation-delay:0.25s;border:2px solid var(--green)">
+    <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green);margin-bottom:4px">✅ Disponibles</div>
+    <div class="kpi-val" id="kpiDisponibles" style="color:var(--green)">—</div>
+    <div class="kpi-label">Vacías y listas para usar</div>
+    <div style="font-size:10px;color:var(--green);margin-top:3px" id="kpiDisponiblesPct">—</div>
+  </div>
+  <div style="display:flex;align-items:center;padding-left:12px;border-left:1px solid var(--border)">
+    <button class="reset-btn" onclick="resetFiltros()" style="white-space:nowrap;padding:10px 16px;font-size:13px">↺ Limpiar filtros</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- SIDEBAR FILTROS -->
+  <div class="sidebar">
+    <div>
+      <div class="filter-group-title">Sector <span style="font-size:9px;font-weight:400;color:var(--muted)">(selección múltiple)</span></div>
+      <button class="filter-btn active" data-filter="sector" data-val="TODOS" onclick="toggleSector('TODOS',this)">Todos</button>
+      <button class="filter-btn" data-filter="sector" data-val="SELECTIVO VIEJO" onclick="toggleSector('SELECTIVO VIEJO',this)">Selectivo Viejo</button>
+      <button class="filter-btn" data-filter="sector" data-val="SELECTIVO NUEVO" onclick="toggleSector('SELECTIVO NUEVO',this)">Selectivo Nuevo</button>
+      <button class="filter-btn" data-filter="sector" data-val="CAJONES CHERY" onclick="toggleSector('CAJONES CHERY',this)">Cajones Chery</button>
+    </div>
+    <div>
+      <div class="filter-group-title">Tipo Ubicación</div>
+      <button class="filter-btn active" data-filter="tipo" data-val="TODOS" onclick="setFilter('tipo','TODOS',this)">Todos</button>
+      <button class="filter-btn" data-filter="tipo" data-val="ALTURA" onclick="setFilter('tipo','ALTURA',this)">Altura</button>
+      <button class="filter-btn" data-filter="tipo" data-val="PICKING" onclick="setFilter('tipo','PICKING',this)">Picking</button>
+    </div>
+    <div>
+      <div class="filter-group-title">Ocupación</div>
+      <button class="filter-btn active" data-filter="ocup" data-val="TODOS" onclick="setFilter('ocup','TODOS',this)">Todos</button>
+      <button class="filter-btn" data-filter="ocup" data-val="OCUPADA" onclick="setFilter('ocup','OCUPADA',this)">Ocupadas</button>
+      <button class="filter-btn" data-filter="ocup" data-val="VACIA" onclick="setFilter('ocup','VACIA',this)">Vacías</button>
+    </div>
+    <div>
+      <div class="filter-group-title">Estado (OBS)</div>
+      <button class="filter-btn active" data-filter="obs" data-val="TODOS" onclick="setFilter('obs','TODOS',this)">Todos</button>
+      <button class="filter-btn" data-filter="obs" data-val="OK" onclick="setFilter('obs','OK',this)">OK</button>
+      <button class="filter-btn" data-filter="obs" data-val="NOOK" onclick="setFilter('obs','NOOK',this)">NOOK</button>
+    </div>
+    <button class="reset-btn" onclick="resetFiltros()" style="display:none">↺ Limpiar filtros</button>
+  </div>
+
+  <!-- CONTENIDO -->
+  <div class="content">
+
+    <!-- TARJETAS POR SECTOR -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px" id="sectorCards"></div>
+
+    <!-- TARJETA DINÁMICA SELECCIÓN MÚLTIPLE -->
+    <div id="seleccionCard" style="display:none;background:#fff;border:2px solid var(--accent);border-radius:12px;padding:16px;animation:fadeUp 0.3s ease">
+      <div style="font-family:var(--font-display);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);margin-bottom:12px">
+        📊 Selección combinada: <span id="seleccionNombre" style="font-weight:900">—</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <div style="text-align:center">
+          <div style="font-family:var(--font-display);font-size:22px;font-weight:900" id="selTotal">—</div>
+          <div style="font-size:10px;color:var(--muted)">Total</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--accent)" id="selOcup">—</div>
+          <div style="font-size:10px;color:var(--muted)">Ocupadas</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--green)" id="selVacia">—</div>
+          <div style="font-size:10px;color:var(--muted)">Vacías</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:var(--font-display);font-size:22px;font-weight:900;color:#ea580c" id="selPct">—</div>
+          <div style="font-size:10px;color:var(--muted)">% Ocupación</div>
+        </div>
+      </div>
+      <div style="height:8px;border-radius:4px;overflow:hidden;display:flex;background:#e5e7eb" id="selBar"></div>
+    </div>
+
+    <!-- TIPO BLOCKS -->
+    <div class="tipo-row">
+      <div class="tipo-block">
+        <div class="tipo-block-name">🏷 Picking <span class="tipo-pct-badge" id="pickingPct">—</span></div>
+        <div class="tipo-kpis">
+          <div><div class="tipo-kpi-val" id="pickingTotal">—</div><div class="tipo-kpi-label">Posiciones Picking</div></div>
+          <div><div class="tipo-kpi-val" style="color:var(--accent)" id="pickingOcup">—</div><div class="tipo-kpi-label">Picking Ocupadas</div></div>
+          <div><div class="tipo-kpi-val" style="color:var(--green)" id="pickingVacia">—</div><div class="tipo-kpi-label">Picking Vacías</div></div>
+        </div>
+        <div class="tipo-bar" id="pickingBar"></div>
+      </div>
+      <div class="tipo-block">
+        <div class="tipo-block-name">🏗 Altura <span class="tipo-pct-badge" id="alturaPct">—</span></div>
+        <div class="tipo-kpis">
+          <div><div class="tipo-kpi-val" id="alturaTotal">—</div><div class="tipo-kpi-label">Posiciones Altura</div></div>
+          <div><div class="tipo-kpi-val" style="color:var(--accent)" id="alturaOcup">—</div><div class="tipo-kpi-label">Altura Ocupadas</div></div>
+          <div><div class="tipo-kpi-val" style="color:var(--green)" id="alturaVacia">—</div><div class="tipo-kpi-label">Altura Vacías</div></div>
+        </div>
+        <div class="tipo-bar" id="alturaBar"></div>
+      </div>
+    </div>
+
+    <!-- GRAFICO -->
+    <div class="chart-block">
+      <div class="block-title">% Ocupación por Tipo de Ubicación</div>
+      <canvas id="chartTipo" height="65"></canvas>
+    </div>
+
+    <!-- TABLA -->
+    <div class="tabla-block">
+      <div class="tabla-top">
+        <div class="tabla-top-title">Detalle de Ubicaciones</div>
+        <div class="tabla-count" id="tablaCount">—</div>
+      </div>
+      <div class="tabla-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>LOC</th>
+              <th>Tipo LOC</th>
+              <th>Sector</th>
+              <th>Ocupación</th>
+              <th>OBS</th>
+            </tr>
+          </thead>
+          <tbody id="tablaBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  Loginter · Ocupación del Depósito · Operación CMA · <span id="footerFecha"></span>
+</div>
+
+<script>
+const SHEET_ID = '1PzWxSUSEFAhR72J7N9Ag2Qn_utms8noGXlNF4_y3PCk';
+const SHEET_GID = '0';
+
+let todosLosDatos = [];
+let chartTipo = null;
+let filtros = {sectores:[], tipo:'TODOS', ocup:'TODOS', obs:'TODOS'};
+const fmt = n => n?.toLocaleString('es-AR') ?? '—';
+
+function toggleSector(val, btn) {
+  if (val === 'TODOS') {
+    filtros.sectores = [];
+    document.querySelectorAll('[data-filter="sector"]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  } else {
+    // quitar TODOS
+    document.querySelector('[data-filter="sector"][data-val="TODOS"]').classList.remove('active');
+    if (filtros.sectores.includes(val)) {
+      filtros.sectores = filtros.sectores.filter(s => s !== val);
+      btn.classList.remove('active');
+    } else {
+      filtros.sectores.push(val);
+      btn.classList.add('active');
+    }
+    if (filtros.sectores.length === 0) {
+      document.querySelector('[data-filter="sector"][data-val="TODOS"]').classList.add('active');
+    }
+  }
+  renderDashboard();
+}
+
+function setFilter(key, val, btn) {
+  filtros[key] = val;
+  document.querySelectorAll(`[data-filter="${key}"]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDashboard();
+}
+
+function resetFiltros() {
+  filtros = {sectores:[], tipo:'TODOS', ocup:'TODOS', obs:'TODOS'};
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.remove('active');
+    if (b.dataset.val === 'TODOS') b.classList.add('active');
+  });
+  renderDashboard();
+}
+
+function getFiltered() {
+  return todosLosDatos.filter(r => {
+    if (filtros.sectores.length > 0 && !filtros.sectores.includes(r.sector)) return false;
+    if (filtros.tipo !== 'TODOS' && r.tipo  !== filtros.tipo)  return false;
+    if (filtros.ocup !== 'TODOS' && r.ocup  !== filtros.ocup)  return false;
+    if (filtros.obs  !== 'TODOS' && r.obs   !== filtros.obs)   return false;
+    return true;
+  });
+}
+
+function renderTipoBlock(prefix, rows) {
+  const tot  = rows.length;
+  const ocup = rows.filter(r => r.ocup === 'OCUPADA').length;
+  const vac  = rows.filter(r => r.ocup === 'VACIA').length;
+  const p    = tot > 0 ? (ocup/tot*100).toFixed(2) : '0.00';
+  document.getElementById(`${prefix}Total`).textContent = fmt(tot);
+  document.getElementById(`${prefix}Ocup`).textContent  = fmt(ocup);
+  document.getElementById(`${prefix}Vacia`).textContent = fmt(vac);
+  document.getElementById(`${prefix}Pct`).textContent   = p + ' %';
+  document.getElementById(`${prefix}Bar`).innerHTML = tot > 0 ? `
+    <div style="width:${(ocup/tot*100).toFixed(1)}%;background:#1a56db;height:100%"></div>
+    <div style="width:${(vac/tot*100).toFixed(1)}%;background:#057a55;height:100%"></div>` : '';
+}
+
+function renderDashboard() {
+  const todos = todosLosDatos;
+  const filtrados = getFiltered();
+
+  // ── TARJETAS POR SECTOR → respetan filtros de tipo y obs ──
+  const sectoresUnicos = [...new Set(todos.map(r => r.sector))].sort();
+
+  // datos de sector aplicando filtros de tipo/obs (no sector ni ocup)
+  function getSectorRows(sector) {
+    return todos.filter(r => {
+      if (r.sector !== sector) return false;
+      if (filtros.tipo !== 'TODOS' && r.tipo !== filtros.tipo) return false;
+      if (filtros.obs  !== 'TODOS' && r.obs  !== filtros.obs)  return false;
+      return true;
+    });
+  }
+
+  document.getElementById('sectorCards').innerHTML = sectoresUnicos.map(s => {
+    const rows = getSectorRows(s);
+    const v = {
+      total: rows.length,
+      ocup:  rows.filter(r => r.ocup === 'OCUPADA').length,
+      vacia: rows.filter(r => r.ocup === 'VACIA').length,
+    };
+    const p = v.total > 0 ? (v.ocup/v.total*100).toFixed(1) : '0.0';
+    const color = parseFloat(p) >= 95 ? 'var(--red)' : parseFloat(p) >= 85 ? 'var(--yellow)' : 'var(--green)';
+    return `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;">
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:800;text-transform:uppercase;margin-bottom:10px">${s}</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:11px;color:var(--muted)">Total</span>
+        <strong style="font-size:12px">${fmt(v.total)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:11px;color:var(--accent)">Ocupadas</span>
+        <strong style="font-size:12px;color:var(--accent)">${fmt(v.ocup)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:11px;color:var(--green)">Vacías</span>
+        <strong style="font-size:12px;color:var(--green)">${fmt(v.vacia)}</strong>
+      </div>
+      <div style="height:6px;border-radius:3px;overflow:hidden;display:flex;background:#e5e7eb;margin-bottom:6px">
+        <div style="width:${v.total>0?(v.ocup/v.total*100).toFixed(1):0}%;background:var(--accent)"></div>
+        <div style="width:${v.total>0?(v.vacia/v.total*100).toFixed(1):0}%;background:var(--green)"></div>
+      </div>
+      <div style="text-align:right;font-family:var(--font-display);font-size:14px;font-weight:900;color:${color}">${p}%</div>
+    </div>`;
+  }).join('');
+
+  // ── TARJETA DINÁMICA → suma sectores seleccionados respetando filtros tipo/obs ──
+  const selCard = document.getElementById('seleccionCard');
+  if (filtros.sectores.length >= 1) {
+    const selRows = todos.filter(r => {
+      if (!filtros.sectores.includes(r.sector)) return false;
+      if (filtros.tipo !== 'TODOS' && r.tipo !== filtros.tipo) return false;
+      if (filtros.obs  !== 'TODOS' && r.obs  !== filtros.obs)  return false;
+      return true;
+    });
+    const sTotal = selRows.length;
+    const sOcup  = selRows.filter(r => r.ocup === 'OCUPADA').length;
+    const sVacia = selRows.filter(r => r.ocup === 'VACIA').length;
+    const sPct   = sTotal > 0 ? (sOcup/sTotal*100).toFixed(2) : '0.00';
+    const tipoLabel = filtros.tipo !== 'TODOS' ? ` (${filtros.tipo})` : '';
+    document.getElementById('seleccionNombre').textContent = filtros.sectores.join(' + ') + tipoLabel;
+    document.getElementById('selTotal').textContent = fmt(sTotal);
+    document.getElementById('selOcup').textContent  = fmt(sOcup);
+    document.getElementById('selVacia').textContent = fmt(sVacia);
+    document.getElementById('selPct').textContent   = sPct + ' %';
+    document.getElementById('selBar').innerHTML = sTotal > 0 ? `
+      <div style="width:${(sOcup/sTotal*100).toFixed(1)}%;background:var(--accent);height:100%"></div>
+      <div style="width:${(sVacia/sTotal*100).toFixed(1)}%;background:var(--green);height:100%"></div>` : '';
+    selCard.style.display = 'block';
+  } else {
+    selCard.style.display = 'none';
+  }
+
+  // ── KPIs GLOBALES → siempre todos los datos ──
+  const total    = todos.length;
+  const ocupadas = todos.filter(r => r.ocup === 'OCUPADA').length;
+  const vacias   = todos.filter(r => r.ocup === 'VACIA').length;
+  const nook     = todos.filter(r => r.obs  === 'NOOK').length;
+  const disponibles = todos.filter(r => r.ocup === 'VACIA' && r.obs === 'OK').length;
+  const pctOcup  = total > 0 ? (ocupadas/total*100).toFixed(2) : '0.00';
+  const pctDisp  = total > 0 ? (disponibles/total*100).toFixed(1) : '0.0';
+
+  document.getElementById('kpiTotal').textContent = fmt(total);
+  document.getElementById('kpiOcup').textContent  = fmt(ocupadas);
+  document.getElementById('kpiVacia').textContent = fmt(vacias);
+  document.getElementById('kpiPct').textContent   = pctOcup + ' %';
+  document.getElementById('kpiNook').textContent  = fmt(nook);
+  document.getElementById('kpiDisponibles').textContent = fmt(disponibles);
+  document.getElementById('kpiDisponiblesPct').textContent = pctDisp + '% del total';
+
+  // ── BLOQUES TIPO → siempre con todos los datos ──
+  const picking = todos.filter(r => r.tipo === 'PICKING');
+  const altura  = todos.filter(r => r.tipo === 'ALTURA');
+  renderTipoBlock('picking', picking);
+  renderTipoBlock('altura',  altura);
+
+  // ── GRAFICO → siempre con todos los datos ──
+  const pickingPct = picking.length > 0 ? +(picking.filter(r=>r.ocup==='OCUPADA').length/picking.length*100).toFixed(2) : 0;
+  const alturaPct  = altura.length  > 0 ? +(altura.filter(r=>r.ocup==='OCUPADA').length/altura.length*100).toFixed(2)   : 0;
+
+  if (chartTipo) chartTipo.destroy();
+  chartTipo = new Chart(document.getElementById('chartTipo'), {
+    type:'bar',
+    data:{
+      labels:['ALTURA','PICKING'],
+      datasets:[{
+        data:[alturaPct, pickingPct],
+        backgroundColor:['#1a56db','#1a56db'],
+        borderRadius:4, borderSkipped:false,
+      }]
+    },
+    options:{
+      indexAxis:'y', responsive:true,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>' '+ctx.raw+' %'}},
+      },
+      scales:{
+        x:{min:0,max:100,grid:{color:'#f0f2f5'},ticks:{callback:v=>v+' %',font:{size:11}}},
+        y:{grid:{display:false},ticks:{font:{size:13,weight:'700'}}}
+      }
+    }
+  });
+
+  // ── TABLA → solo esta se filtra ──
+  const MAX = 500;
+  const shown = filtrados.slice(0, MAX);
+  document.getElementById('tablaCount').textContent = `${fmt(filtrados.length)} ubicaciones${filtrados.length > MAX ? ` (mostrando ${MAX})` : ''}`;
+  document.getElementById('tablaBody').innerHTML = shown.map(r => `
+    <tr>
+      <td><strong>${r.loc}</strong></td>
+      <td>${r.tipo}</td>
+      <td>${r.sector}</td>
+      <td><span class="badge ${r.ocup==='OCUPADA'?'b-ocup':'b-vacia'}">${r.ocup}</span></td>
+      <td><span class="badge ${r.obs==='OK'?'b-ok':'b-nook'}">${r.obs}</span></td>
+    </tr>`).join('');
+}
+
+function fetchData() {
+  const old = document.getElementById('gviz-ocup');
+  if (old) old.remove();
+
+  window.__gvizOcupCallback = function(resp) {
+    try {
+      if (resp && resp.status === 'error') throw new Error(resp.errors?.[0]?.message || 'Error Google Sheets');
+      if (!resp || !resp.table || !resp.table.rows || !resp.table.rows.length) throw new Error('Sin datos');
+
+      todosLosDatos = resp.table.rows.map(row => {
+        const c = row.c || [];
+        const get = i => (c[i] && c[i].v !== null) ? String(c[i].v).trim() : '';
+        return { calle:get(0), loc:get(1), tipo:get(2), sector:get(3), obs:get(4), ocup:get(5) };
+      }).filter(r => r.loc);
+
+      renderDashboard();
+
+      const ahora = new Date();
+      const fStr = ahora.toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      document.getElementById('lastUpdate').textContent = 'Actualizado: '+fStr;
+      document.getElementById('footerFecha').textContent = ahora.toLocaleDateString('es-AR',{year:'numeric',month:'long',day:'numeric'});
+
+      const ls = document.getElementById('loadingScreen');
+      if (ls) { ls.classList.add('hidden'); setTimeout(()=>ls.remove(),600); }
+
+    } catch(e) {
+      const lt = document.querySelector('.loading-text');
+      if (lt) lt.textContent = 'Error: '+e.message;
+    }
+  };
+
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=select%20A%2CB%2CC%2CD%2CE%2CF&gid=${SHEET_GID}&tqx=out:json;responseHandler:__gvizOcupCallback&headers=1`;
+  const s = document.createElement('script');
+  s.id = 'gviz-ocup';
+  s.src = url;
+  s.onerror = () => { document.querySelector('.loading-text').textContent = 'Error al conectar.'; };
+  document.head.appendChild(s);
+}
+
+fetchData();
+setInterval(fetchData, 5 * 60 * 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis de Rotación — Loginter</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: #f8f9fa;
+    color: #333;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1a56db 0%, #1a56db 100%);
+    color: white;
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .back-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+  }
+
+  .back-btn:hover {
+    background: rgba(255,255,255,0.3);
+  }
+
+  .header-title {
+    font-size: 24px;
+    font-weight: 700;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.5px;
+  }
+
+  .upload-section {
+    background: white;
+    padding: 20px 30px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+  }
+
+  .file-input-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .file-input-wrapper input[type="file"] {
+    display: none;
+  }
+
+  .file-btn {
+    background: #1a56db;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s;
+  }
+
+  .file-btn:hover {
+    background: #1449c4;
+  }
+
+  .file-name {
+    color: #666;
+    font-size: 14px;
+  }
+
+  .main {
+    padding: 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+  }
+
+  .spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #1a56db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .dashboard {
+    display: none;
+  }
+
+  .dashboard.active {
+    display: block;
+  }
+
+  .section {
+    background: white;
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'Barlow Condensed', sans-serif;
+    margin-bottom: 20px;
+    color: #1a56db;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .kpi-principal {
+    background: linear-gradient(135deg, #1a56db 0%, #1449c4 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  .kpi-principal-label {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.9;
+    margin-bottom: 15px;
+  }
+
+  .kpi-principal-value {
+    font-size: 96px;
+    font-weight: 900;
+    font-family: 'Barlow Condensed', sans-serif;
+    line-height: 1;
+    margin: 20px 0;
+  }
+
+  .kpi-principal-desc {
+    font-size: 18px;
+    opacity: 0.95;
+    margin-bottom: 30px;
+  }
+
+  .kpi-principal-stats {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    margin-top: 30px;
+    padding-top: 30px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+  }
+
+  .kpi-stat {
+    text-align: center;
+  }
+
+  .kpi-stat-value {
+    font-size: 36px;
+    font-weight: 700;
+    font-family: 'Barlow Condensed', sans-serif;
+  }
+
+  .kpi-stat-label {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .kpi-card {
+    background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s;
+  }
+
+  .kpi-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #1a56db;
+  }
+
+  .kpi-label {
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .kpi-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a56db;
+    font-family: 'Barlow Condensed', sans-serif;
+    margin-bottom: 5px;
+  }
+
+  .kpi-percent {
+    font-size: 14px;
+    color: #666;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+
+  .brands-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .brands-table thead {
+    background: linear-gradient(135deg, #1a56db 0%, #1a56db 100%);
+    color: white;
+  }
+
+  .brands-table th {
+    padding: 16px;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+  }
+
+  .brands-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .brands-table tbody tr:hover {
+    background: #f8f9fa;
+  }
+
+  .brand-name {
+    font-weight: 600;
+    color: #1a56db;
+  }
+
+  .sku-count {
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .distribution-bar {
+    display: flex;
+    height: 24px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #f0f0f0;
+    gap: 2px;
+  }
+
+  .distribution-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .segment-a { background: #1a56db; }
+  .segment-b { background: #5b7cfa; }
+  .segment-c { background: #a5d8ff; }
+  .segment-sr { background: #d0d0d0; }
+
+  .kpi-card.alert {
+    border-color: #ff6b6b;
+    background: linear-gradient(135deg, #ffe0e0 0%, #ffffff 100%);
+  }
+
+  .kpi-card.alert .kpi-value {
+    color: #ff6b6b;
+  }
+
+  .kpi-card.success {
+    border-color: #51cf66;
+    background: linear-gradient(135deg, #e6ffed 0%, #ffffff 100%);
+  }
+
+  .kpi-card.success .kpi-value {
+    color: #51cf66;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-bottom: 25px;
+  }
+
+  .row.full {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 20px;
+  }
+
+  .alert-box {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 15px;
+    font-size: 14px;
+    color: #856404;
+  }
+
+  .alert-box.danger {
+    background: #f8d7da;
+    border-left-color: #dc3545;
+    color: #721c24;
+  }
+
+  .alert-box.success {
+    background: #d4edda;
+    border-left-color: #28a745;
+    color: #155724;
+  }
+
+  .button-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 20px;
+  }
+
+  .btn-download {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+    font-size: 14px;
+  }
+
+  .btn-download-success {
+    background: #51cf66;
+    color: white;
+  }
+
+  .btn-download-success:hover {
+    background: #40c057;
+  }
+
+  .btn-download-danger {
+    background: #ff6b6b;
+    color: white;
+  }
+
+  .btn-download-danger:hover {
+    background: #fa5252;
+  }
+
+  @media (max-width: 768px) {
+    .row {
+      grid-template-columns: 1fr;
+    }
+
+    .kpi-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .kpi-principal-value {
+      font-size: 64px;
+    }
+
+    .kpi-principal-stats {
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .button-group {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <button class="back-btn" onclick="window.location.href='index.html'; return false;">← Portal</button>
+    <div class="header-title">Análisis de Rotación</div>
+  </div>
+</div>
+
+<div class="upload-section">
+  <div class="file-input-wrapper">
+    <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)">
+    <button class="file-btn" onclick="document.getElementById('csvFile').click();">📁 Cargar CSV</button>
+  </div>
+  <span class="file-name" id="fileName">Ningún archivo cargado</span>
+</div>
+
+<div class="main">
+  <div class="loading" id="loading" style="display:none;">
+    <div class="spinner"></div>
+    <p>Procesando datos...</p>
+  </div>
+
+  <div class="dashboard" id="dashboard">
+    <!-- KPI PRINCIPAL - TIPO A EN PISO -->
+    <div class="kpi-principal">
+      <div class="kpi-principal-label">📊 Indicador Clave de Gestión</div>
+      <div class="kpi-principal-value" id="tipoAPercentageDisplay">0%</div>
+      <div class="kpi-principal-desc">Del 100% de Stock Tipo A, este porcentaje está en ubicaciones de Piso (Óptimo)</div>
+      <div class="kpi-principal-stats">
+        <div class="kpi-stat">
+          <div class="kpi-stat-value" id="tipoAPisoUnitsDisplay">0</div>
+          <div class="kpi-stat-label">Unidades en Piso</div>
+        </div>
+        <div class="kpi-stat">
+          <div class="kpi-stat-value" id="tipoAAlturaUnitsDisplay">0</div>
+          <div class="kpi-stat-label">Unidades en Altura</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 1: RESUMEN DE SKUs -->
+    <div class="section">
+      <div class="section-title">📦 Resumen de SKUs (Valores Únicos)</div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">SKUs Tipo A</div>
+          <div class="kpi-value" id="skuA">0</div>
+          <div class="kpi-percent" id="skuAPct">0%</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">SKUs Tipo B</div>
+          <div class="kpi-value" id="skuB">0</div>
+          <div class="kpi-percent" id="skuBPct">0%</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">SKUs Tipo C</div>
+          <div class="kpi-value" id="skuC">0</div>
+          <div class="kpi-percent" id="skuCPct">0%</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">SKUs Sin Rotación</div>
+          <div class="kpi-value" id="skuSR">0</div>
+          <div class="kpi-percent" id="skuSRPct">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 2: UNIDADES POR ROTACIÓN -->
+    <div class="section">
+      <div class="section-title">📊 Unidades por Tipo de Rotación</div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Unidades Tipo A</div>
+          <div class="kpi-value" id="unitA">0</div>
+          <div class="kpi-percent" id="unitAPct">0%</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Unidades Tipo B</div>
+          <div class="kpi-value" id="unitB">0</div>
+          <div class="kpi-percent" id="unitBPct">0%</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Unidades Tipo C</div>
+          <div class="kpi-value" id="unitC">0</div>
+          <div class="kpi-percent" id="unitCPct">0%</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Unidades Sin Rotación</div>
+          <div class="kpi-value" id="unitSR">0</div>
+          <div class="kpi-percent" id="unitSRPct">0%</div>
+        </div>
+      </div>
+      <div class="row full">
+        <div class="chart-container">
+          <canvas id="rotacionChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3: POSICIONAMIENTO TIPO A -->
+    <div class="section">
+      <div class="section-title">⚠️ Posicionamiento Tipo A (Rápida Rotación)</div>
+      
+      <div style="margin-bottom: 20px;">
+        <h4 style="color:#666; font-size:14px; margin-bottom:10px; text-transform:uppercase; font-weight:600;">SKUs</h4>
+        <div class="kpi-grid">
+          <div class="kpi-card success">
+            <div class="kpi-label">✓ En PISO (Correcto)</div>
+            <div class="kpi-value" id="tipoAPisoSku">0</div>
+            <div class="kpi-percent" id="tipoAPisoSkuPct">0%</div>
+          </div>
+          <div class="kpi-card alert">
+            <div class="kpi-label">✗ En ALTURA (Necesita bajar)</div>
+            <div class="kpi-value" id="tipoAAlturaSku">0</div>
+            <div class="kpi-percent" id="tipoAAlturaSkuPct">0%</div>
+          </div>
+        </div>
+      </div>
+      
+      <div>
+        <h4 style="color:#666; font-size:14px; margin-bottom:10px; text-transform:uppercase; font-weight:600;">Unidades</h4>
+        <div class="kpi-grid">
+          <div class="kpi-card success">
+            <div class="kpi-label">✓ En PISO (Correcto)</div>
+            <div class="kpi-value" id="tipoAPiso">0</div>
+            <div class="kpi-percent" id="tipoAPisoPct">0%</div>
+          </div>
+          <div class="kpi-card alert">
+            <div class="kpi-label">✗ En ALTURA (Necesita bajar)</div>
+            <div class="kpi-value" id="tipoAAltura">0</div>
+            <div class="kpi-percent" id="tipoAAlturaPct">0%</div>
+          </div>
+        </div>
+      </div>
+      <div class="alert-box danger" id="alertTipoA"></div>
+      <div class="button-group">
+        <button class="btn-download btn-download-success" onclick="downloadExcelBajar()">📥 Descargar SKUs a Bajar (Excel)</button>
+      </div>
+      <div class="row full">
+        <div class="chart-container">
+          <canvas id="tipoAChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 4: POSICIONAMIENTO SIN ROTACIÓN -->
+    <div class="section">
+      <div class="section-title">🔄 Posicionamiento Sin Rotación (Lenta/Nula)</div>
+      
+      <div style="margin-bottom: 20px;">
+        <h4 style="color:#666; font-size:14px; margin-bottom:10px; text-transform:uppercase; font-weight:600;">SKUs</h4>
+        <div class="kpi-grid">
+          <div class="kpi-card alert">
+            <div class="kpi-label">✗ En PISO (Necesita subir)</div>
+            <div class="kpi-value" id="srPisoSku">0</div>
+            <div class="kpi-percent" id="srPisoSkuPct">0%</div>
+          </div>
+          <div class="kpi-card success">
+            <div class="kpi-label">✓ En ALTURA (Correcto)</div>
+            <div class="kpi-value" id="srAlturaSku">0</div>
+            <div class="kpi-percent" id="srAlturaSkuPct">0%</div>
+          </div>
+        </div>
+      </div>
+      
+      <div>
+        <h4 style="color:#666; font-size:14px; margin-bottom:10px; text-transform:uppercase; font-weight:600;">Unidades</h4>
+        <div class="kpi-grid">
+          <div class="kpi-card alert">
+            <div class="kpi-label">✗ En PISO (Necesita subir)</div>
+            <div class="kpi-value" id="srPiso">0</div>
+            <div class="kpi-percent" id="srPisoPct">0%</div>
+          </div>
+          <div class="kpi-card success">
+            <div class="kpi-label">✓ En ALTURA (Correcto)</div>
+            <div class="kpi-value" id="srAltura">0</div>
+            <div class="kpi-percent" id="srAlturaPct">0%</div>
+          </div>
+        </div>
+      </div>
+      <div class="alert-box success" id="alertSR"></div>
+      <div class="button-group">
+        <button class="btn-download btn-download-danger" onclick="downloadExcelSubir()">📥 Descargar SKUs a Subir (Excel)</button>
+      </div>
+      <div class="row full">
+        <div class="chart-container">
+          <canvas id="srChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 5: ANÁLISIS POR MARCA -->
+    <div class="section">
+      <div class="section-title">🏷️ Análisis de Rotación por Marca</div>
+      <div class="table-container">
+        <table class="brands-table">
+          <thead>
+            <tr>
+              <th>Marca</th>
+              <th>SKUs A</th>
+              <th>SKUs B</th>
+              <th>SKUs C</th>
+              <th>SKUs Sin Rotación</th>
+              <th>Total SKUs</th>
+              <th>Distribución</th>
+            </tr>
+          </thead>
+          <tbody id="marcasTableBody">
+            <!-- Se llena dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+      <div class="row full" style="margin-top: 30px;">
+        <div class="chart-container">
+          <canvas id="marcasChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Lista de marcas válidas
+const MARCAS_VALIDAS = new Set([
+  'CF', 'CORVEN', 'MUNDIAL', 'ZANELLA', 'ARTICAT', 'CHERY', 'ARTIC CAT', 'KYMCO',
+  'ARCTIC CAT', 'TRIUMPH', 'FOTON', 'BAJAJ', 'GENERICO', 'DFSK', 'FOTONREP',
+  'CFMOTOS', 'KAWASAKI', 'IPONE', 'KINGLONG', 'RINALDI', 'ZHONGTON',
+  '-3CA', '-3000_08', '-3000_07', '-5CU'
+]);
+
+let rotacionChart, tipoAChart, srChart;
+let datosParaDescargar = {
+  bajar: [],
+  subir: []
+};
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  document.getElementById('fileName').textContent = `Archivo: ${file.name}`;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('dashboard').classList.remove('active');
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const csv = e.target.result;
+      const data = parseCSV(csv);
+      processData(data);
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('dashboard').classList.add('active');
+    } catch (error) {
+      alert('Error al procesar el archivo: ' + error.message);
+      document.getElementById('loading').style.display = 'none';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(csv) {
+  const lines = csv.split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^\uFEFF/, ''));
+  const data = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const values = lines[i].split(',');
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] ? values[index].trim() : '';
+    });
+    data.push(row);
+  }
+  return data;
+}
+
+function processData(data) {
+  const skusPorRotacion = {};
+  const unidadesPorRotacion = {};
+  const marcasData = {}; // Nuevo: datos por marca
+  let tipoAPiso = 0, tipoAAltura = 0;
+  let srPiso = 0, srAltura = 0;
+  let tipoAPisoSku = new Set(), tipoAAlturaSku = new Set();
+  let srPisoSku = new Set(), srAlturaSku = new Set();
+  datosParaDescargar.bajar = [];
+  datosParaDescargar.subir = [];
+
+  data.forEach(row => {
+    const sku = row['SKU'];
+    const rotacion = row['Rotacion'] || 'Sin Rotacion';
+    const clase = row['Clase_Loc'];
+    const cant = parseInt(row['Cant']) || 0;
+    const ubicacion = row['LOC'] || '';
+    let marca = (row['Marca'] || '').trim();
+    const descrip = row['Descrip'] || '';
+
+    if (!sku) return;
+
+    // Filtrar solo marcas válidas de la lista
+    if (!MARCAS_VALIDAS.has(marca)) {
+      return; // Ignorar marcas que no están en la lista válida
+    }
+
+    // Inicializar datos de marca
+    if (!marcasData[marca]) {
+      marcasData[marca] = { A: new Set(), B: new Set(), C: new Set(), SR: new Set() };
+    }
+    marcasData[marca][rotacion === 'A' ? 'A' : rotacion === 'B' ? 'B' : rotacion === 'C' ? 'C' : 'SR'].add(sku);
+
+    if (!skusPorRotacion[rotacion]) skusPorRotacion[rotacion] = new Set();
+    skusPorRotacion[rotacion].add(sku);
+
+    if (!unidadesPorRotacion[rotacion]) unidadesPorRotacion[rotacion] = 0;
+    unidadesPorRotacion[rotacion] += cant;
+
+    if (rotacion === 'A') {
+      if (['Piso', 'Balda Picking', 'Balda Chica'].includes(clase)) {
+        tipoAPiso += cant;
+        tipoAPisoSku.add(sku);
+      } else if (clase === 'Altura') {
+        tipoAAltura += cant;
+        tipoAAlturaSku.add(sku);
+        datosParaDescargar.bajar.push({ SKU: sku, Ubicacion: ubicacion, Cantidad: cant, Marca: marca, Descripcion: descrip });
+      }
+    } else if (rotacion === 'Sin Rotacion' || rotacion === 'Sin rotacion') {
+      if (['Piso', 'Balda Picking', 'Balda Chica'].includes(clase)) {
+        srPiso += cant;
+        srPisoSku.add(sku);
+        datosParaDescargar.subir.push({ SKU: sku, Ubicacion: ubicacion, Cantidad: cant, Marca: marca, Descripcion: descrip });
+      } else if (clase === 'Altura') {
+        srAltura += cant;
+        srAlturaSku.add(sku);
+      }
+    }
+  });
+
+  const totalSkus = Object.values(skusPorRotacion).reduce((sum, set) => sum + set.size, 0);
+  const totalUnidades = Object.values(unidadesPorRotacion).reduce((sum, val) => sum + val, 0);
+
+  updateKPI('skuA', skusPorRotacion['A']?.size || 0, totalSkus);
+  updateKPI('skuB', skusPorRotacion['B']?.size || 0, totalSkus);
+  updateKPI('skuC', skusPorRotacion['C']?.size || 0, totalSkus);
+  updateKPI('skuSR', (skusPorRotacion['Sin Rotacion']?.size || 0) + (skusPorRotacion['Sin rotacion']?.size || 0), totalSkus);
+
+  updateKPI('unitA', unidadesPorRotacion['A'] || 0, totalUnidades);
+  updateKPI('unitB', unidadesPorRotacion['B'] || 0, totalUnidades);
+  updateKPI('unitC', unidadesPorRotacion['C'] || 0, totalUnidades);
+  updateKPI('unitSR', (unidadesPorRotacion['Sin Rotacion'] || 0) + (unidadesPorRotacion['Sin rotacion'] || 0), totalUnidades);
+
+  const totalTipoA = tipoAPiso + tipoAAltura;
+  const totalTipoASku = tipoAPisoSku.size + tipoAAlturaSku.size;
+  updateKPI('tipoAPiso', tipoAPiso, totalTipoA);
+  updateKPI('tipoAAltura', tipoAAltura, totalTipoA);
+  updateKPI('tipoAPisoSku', tipoAPisoSku.size, totalTipoASku);
+  updateKPI('tipoAAlturaSku', tipoAAlturaSku.size, totalTipoASku);
+
+  const totalSR = srPiso + srAltura;
+  const totalSRSku = srPisoSku.size + srAlturaSku.size;
+  updateKPI('srPiso', srPiso, totalSR);
+  updateKPI('srAltura', srAltura, totalSR);
+  updateKPI('srPisoSku', srPisoSku.size, totalSRSku);
+  updateKPI('srAlturaSku', srAlturaSku.size, totalSRSku);
+
+  const tipoACorrectPct = totalTipoA > 0 ? Math.round((tipoAPiso / totalTipoA) * 100) : 0;
+
+  document.getElementById('tipoAPercentageDisplay').textContent = tipoACorrectPct + '%';
+  document.getElementById('tipoAPisoUnitsDisplay').textContent = tipoAPiso.toLocaleString();
+  document.getElementById('tipoAAlturaUnitsDisplay').textContent = tipoAAltura.toLocaleString();
+
+  document.getElementById('alertTipoA').innerHTML = `
+    <strong>Análisis:</strong> ${tipoAPiso.toLocaleString()} unidades (${tipoAPisoSku.size} SKUs) Tipo A están en piso (correcto). 
+    <strong style="color:#721c24;">${tipoAAltura.toLocaleString()} unidades (${tipoAAlturaSku.size} SKUs) necesitan ser bajadas de altura.</strong>
+  `;
+
+  document.getElementById('alertSR').innerHTML = `
+    <strong>Análisis:</strong> ${srAltura.toLocaleString()} unidades (${srAlturaSku.size} SKUs) Sin Rotación están en altura (correcto). 
+    <strong style="color:#155724;">${srPiso.toLocaleString()} unidades (${srPisoSku.size} SKUs) necesitan ser subidas a altura.</strong>
+  `;
+
+  updateMarcasTable(marcasData);
+  updateCharts(unidadesPorRotacion, tipoAPiso, tipoAAltura, srPiso, srAltura, marcasData);
+}
+
+function updateKPI(elementId, value, total) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  document.getElementById(elementId).textContent = value.toLocaleString();
+  document.getElementById(elementId + 'Pct').textContent = pct + '%';
+}
+
+function downloadExcelBajar() {
+  if (datosParaDescargar.bajar.length === 0) {
+    alert('No hay SKUs Tipo A en altura para bajar');
+    return;
+  }
+  downloadExcel(datosParaDescargar.bajar, 'SKUs_a_Bajar_a_Piso.xlsx');
+}
+
+function downloadExcelSubir() {
+  if (datosParaDescargar.subir.length === 0) {
+    alert('No hay SKUs Sin Rotación en piso para subir');
+    return;
+  }
+  downloadExcel(datosParaDescargar.subir, 'SKUs_a_Subir_a_Altura.xlsx');
+}
+
+function downloadExcel(datos, filename) {
+  try {
+    // Crear CSV como alternativa si XLSX no está disponible
+    let csv = 'SKU,Ubicación,Cantidad,Marca,Descripción\n';
+    datos.forEach(row => {
+      csv += `"${row.SKU || ''}","${row.Ubicacion || ''}",${row.Cantidad || 0},"${row.Marca || ''}","${row.Descripcion || ''}"\n`;
+    });
+    
+    // Intentar con XLSX primero
+    if (window.XLSX) {
+      const ws = XLSX.utils.json_to_sheet(datos);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Datos");
+      XLSX.writeFile(wb, filename);
+    } else {
+      // Fallback a CSV
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename.replace('.xlsx', '.csv'));
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  } catch (error) {
+    console.error('Error descargando:', error);
+    alert('Error al descargar: ' + error.message);
+  }
+}
+
+function updateMarcasTable(marcasData) {
+  const tbody = document.getElementById('marcasTableBody');
+  tbody.innerHTML = '';
+  
+  const marcasArray = Object.entries(marcasData).sort((a, b) => {
+    const totalA = a[1].A.size + a[1].B.size + a[1].C.size + a[1].SR.size;
+    const totalB = b[1].A.size + b[1].B.size + b[1].C.size + b[1].SR.size;
+    return totalB - totalA;
+  });
+
+  marcasArray.forEach(([marca, tipos]) => {
+
+    const skuA = tipos.A.size;
+    const skuB = tipos.B.size;
+    const skuC = tipos.C.size;
+    const skuSR = tipos.SR.size;
+    const total = skuA + skuB + skuC + skuSR;
+    
+    const pctA = total > 0 ? Math.round((skuA / total) * 100) : 0;
+    const pctB = total > 0 ? Math.round((skuB / total) * 100) : 0;
+    const pctC = total > 0 ? Math.round((skuC / total) * 100) : 0;
+    const pctSR = total > 0 ? Math.round((skuSR / total) * 100) : 0;
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><span class="brand-name">${marca}</span></td>
+      <td class="sku-count" style="color:#1a56db;">${skuA}</td>
+      <td class="sku-count" style="color:#5b7cfa;">${skuB}</td>
+      <td class="sku-count" style="color:#a5d8ff;">${skuC}</td>
+      <td class="sku-count" style="color:#999;">${skuSR}</td>
+      <td class="sku-count" style="font-weight:700;">${total}</td>
+      <td>
+        <div class="distribution-bar">
+          ${skuA > 0 ? `<div class="distribution-segment segment-a" style="width:${pctA}%">${pctA}%</div>` : ''}
+          ${skuB > 0 ? `<div class="distribution-segment segment-b" style="width:${pctB}%">${pctB}%</div>` : ''}
+          ${skuC > 0 ? `<div class="distribution-segment segment-c" style="width:${pctC}%">${pctC}%</div>` : ''}
+          ${skuSR > 0 ? `<div class="distribution-segment segment-sr" style="width:${pctSR}%">${pctSR}%</div>` : ''}
+        </div>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function updateCharts(unidadesPorRotacion, tipoAPiso, tipoAAltura, srPiso, srAltura, marcasData) {
+  const rotacionCtx = document.getElementById('rotacionChart').getContext('2d');
+  if (rotacionChart) rotacionChart.destroy();
+  rotacionChart = new Chart(rotacionCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Tipo A', 'Tipo B', 'Tipo C', 'Sin Rotación'],
+      datasets: [{
+        data: [
+          unidadesPorRotacion['A'] || 0,
+          unidadesPorRotacion['B'] || 0,
+          unidadesPorRotacion['C'] || 0,
+          (unidadesPorRotacion['Sin Rotacion'] || 0) + (unidadesPorRotacion['Sin rotacion'] || 0)
+        ],
+        backgroundColor: ['#1a56db', '#5b7cfa', '#a5d8ff', '#e0e0e0']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+
+  const tipoACtx = document.getElementById('tipoAChart').getContext('2d');
+  if (tipoAChart) tipoAChart.destroy();
+  tipoAChart = new Chart(tipoACtx, {
+    type: 'bar',
+    data: {
+      labels: ['En Piso\n(Correcto)', 'En Altura\n(Necesita bajar)'],
+      datasets: [{
+        label: 'Unidades',
+        data: [tipoAPiso, tipoAAltura],
+        backgroundColor: ['#51cf66', '#ff6b6b']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'x',
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+
+  const srCtx = document.getElementById('srChart').getContext('2d');
+  if (srChart) srChart.destroy();
+  srChart = new Chart(srCtx, {
+    type: 'bar',
+    data: {
+      labels: ['En Piso\n(Necesita subir)', 'En Altura\n(Correcto)'],
+      datasets: [{
+        label: 'Unidades',
+        data: [srPiso, srAltura],
+        backgroundColor: ['#ff6b6b', '#51cf66']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'x',
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+</script>
+
+</body>
+</html>
