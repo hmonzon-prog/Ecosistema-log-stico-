@@ -33,6 +33,19 @@
     --radius-sm: 8px;
   }
 
+  /* PROTECCIÓN */
+  .auth-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;}
+  .auth-box{background:#fff;padding:40px;border-radius:12px;text-align:center;max-width:400px;}
+  .auth-box h2{margin-bottom:20px;color:#0056b3;}
+  .auth-box input{width:100%;padding:12px;margin-bottom:15px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;}
+  .auth-box button{background:#0056b3;color:#fff;border:none;padding:12px 30px;border-radius:6px;cursor:pointer;font-weight:600;width:100%;margin-bottom:10px;}
+  .auth-box .guest-btn{background:#6b7280;}
+  .auth-box .guest-btn:hover{background:#4b5563;}
+  .auth-box .divider-text{text-align:center;color:#999;margin:15px 0;font-size:12px;}
+  .auth-box .admin-section{border-top:1px solid #e2e8f0;padding-top:15px;}
+  .protected-content{display:none;}
+  .protected-content.visible{display:block;}
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -642,6 +655,19 @@
 </head>
 <body>
 
+<div id="authModal" class="auth-modal" style="display:none;">
+  <div class="auth-box">
+    <h2>🔐 Acceso Portal G.O.I.</h2>
+    <p style="margin-bottom:20px;color:#666;">Este portal es solo para administradores</p>
+    <div class="admin-section">
+      <input type="password" id="adminPass" placeholder="Contraseña" onkeypress="if(event.key==='Enter') checkGOIAuth()">
+      <button onclick="checkGOIAuth()">🔓 Acceso Administrativo</button>
+    </div>
+  </div>
+</div>
+
+<div id="protectedContent" class="protected-content">
+
 <!-- HEADER -->
 <header class="header">
   <div class="header-left">
@@ -1012,8 +1038,35 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); document.getElementById('search-input').focus(); }
 });
 
-// ── INIT ──────────────────────────────────────────────────
+// ─// ── INIT ──────────────────────────────────────────────
 render();
 </script>
+
+</div> <!-- Cierre de protectedContent -->
+
+<script>
+(function() {
+  const ADMIN_PASSWORD = 'Mundowarcraft1';
+  const isAdmin = sessionStorage.getItem('goi_admin') === 'true';
+  
+  if (!isAdmin) {
+    document.getElementById('authModal').style.display = 'flex';
+  } else {
+    document.getElementById('protectedContent').classList.add('visible');
+  }
+  
+  window.checkGOIAuth = function() {
+    const pass = document.getElementById('adminPass').value;
+    if (pass === ADMIN_PASSWORD) {
+      sessionStorage.setItem('goi_admin', 'true');
+      document.getElementById('authModal').style.display = 'none';
+      document.getElementById('protectedContent').classList.add('visible');
+    } else {
+      alert('Contraseña incorrecta');
+    }
+  };
+})();
+</script>
+
 </body>
 </html>
