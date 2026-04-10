@@ -411,6 +411,88 @@
     background: #fa5252;
   }
 
+  .filter-section {
+    background: white;
+    padding: 20px 30px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .filter-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .filter-group select, .filter-group input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: 'Barlow', sans-serif;
+  }
+
+  .filter-group select {
+    min-width: 180px;
+  }
+
+  .filter-group input[type="number"] {
+    width: 80px;
+  }
+
+  .btn-apply-filter {
+    background: #1a56db;
+    color: white;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .btn-apply-filter:hover {
+    background: #1449c4;
+  }
+
+  .priority-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .priority-critical {
+    background: #dc3545;
+    color: white;
+  }
+
+  .priority-high {
+    background: #fd7e14;
+    color: white;
+  }
+
+  .priority-medium {
+    background: #ffc107;
+    color: #333;
+  }
+
+  .priority-low {
+    background: #28a745;
+    color: white;
+  }
+
   @media (max-width: 768px) {
     .row {
       grid-template-columns: 1fr;
@@ -450,6 +532,29 @@
     <button class="file-btn" onclick="document.getElementById('csvFile').click();">📁 Cargar CSV</button>
   </div>
   <span class="file-name" id="fileName">Ningún archivo cargado</span>
+</div>
+
+<div class="filter-section" id="filterSection" style="display:none;">
+  <div class="filter-group">
+    <label>Marca:</label>
+    <select id="filterMarca" onchange="applyFilters()">
+      <option value="todas">Todas las marcas</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Filtrar SKUs a bajar:</label>
+    <select id="filterAltitud">
+      <option value="50">Más de 50% en Altura</option>
+      <option value="70" selected>Más de 70% en Altura</option>
+      <option value="100">100% en Altura</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Stock mínimo:</label>
+    <input type="number" id="minStock" value="1" min="1">
+  </div>
+  <button class="btn-apply-filter" onclick="applyFilters()">Aplicar Filtros</button>
+  <span id="filterResultCount" style="color:#666; font-size:14px;"></span>
 </div>
 
 <div class="main">
@@ -658,7 +763,6 @@
 </div>
 
 <script>
-// Lista de marcas válidas
 const MARCAS_VALIDAS = new Set([
   'CF', 'CORVEN', 'MUNDIAL', 'ZANELLA', 'ARTICAT', 'CHERY', 'ARTIC CAT', 'KYMCO',
   'ARCTIC CAT', 'TRIUMPH', 'FOTON', 'BAJAJ', 'GENERICO', 'DFSK', 'FOTONREP',
@@ -667,10 +771,12 @@ const MARCAS_VALIDAS = new Set([
 ]);
 
 let rotacionChart, tipoAChart, srChart;
-let datosParaDescargar = {
+let datosCompletos = {
   bajar: [],
-  subir: []
+  filtrados: []
 };
+let rawData = [];
+let marcasUnicas = [];
 
 function handleFileUpload(event) {
   const file = event.target.files[0];
@@ -679,15 +785,18 @@ function handleFileUpload(event) {
   document.getElementById('fileName').textContent = `Archivo: ${file.name}`;
   document.getElementById('loading').style.display = 'block';
   document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('filterSection').style.display = 'none';
 
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
       const csv = e.target.result;
-      const data = parseCSV(csv);
-      processData(data);
+      rawData = parseCSV(csv);
+      processData(rawData);
       document.getElementById('loading').style.display = 'none';
       document.getElementById('dashboard').classList.add('active');
+      document.getElementById('filterSection').style.display = 'flex';
+      applyFilters();
     } catch (error) {
       alert('Error al procesar el archivo: ' + error.message);
       document.getElementById('loading').style.display = 'none';
@@ -716,13 +825,17 @@ function parseCSV(csv) {
 function processData(data) {
   const skusPorRotacion = {};
   const unidadesPorRotacion = {};
-  const marcasData = {}; // Nuevo: datos por marca
+  const marcasData = {};
   let tipoAPiso = 0, tipoAAltura = 0;
   let srPiso = 0, srAltura = 0;
   let tipoAPisoSku = new Set(), tipoAAlturaSku = new Set();
   let srPisoSku = new Set(), srAlturaSku = new Set();
-  datosParaDescargar.bajar = [];
-  datosParaDescargar.subir = [];
+  
+  datosCompletos.bajar = [];
+  datosCompletos.filtrados = [];
+
+  // Estructura para calcular % por SKU
+  const skuStats = {};
 
   data.forEach(row => {
     const sku = row['SKU'];
@@ -735,12 +848,10 @@ function processData(data) {
 
     if (!sku) return;
 
-    // Filtrar solo marcas válidas de la lista
     if (!MARCAS_VALIDAS.has(marca)) {
-      return; // Ignorar marcas que no están en la lista válida
+      return;
     }
 
-    // Inicializar datos de marca
     if (!marcasData[marca]) {
       marcasData[marca] = { A: new Set(), B: new Set(), C: new Set(), SR: new Set() };
     }
@@ -752,26 +863,85 @@ function processData(data) {
     if (!unidadesPorRotacion[rotacion]) unidadesPorRotacion[rotacion] = 0;
     unidadesPorRotacion[rotacion] += cant;
 
+    // Calcular stats por SKU para Tipo A
     if (rotacion === 'A') {
-      if (['Piso', 'Balda Picking', 'Balda Chica'].includes(clase)) {
+      if (!skuStats[sku]) {
+        skuStats[sku] = { 
+          piso: 0, 
+          altura: 0, 
+          total: 0, 
+          marca, 
+          descrip,
+          ubicaciones: []
+        };
+      }
+
+      const esPiso = ['Piso', 'Balda Picking', 'Balda Chica'].includes(clase);
+      const esAltura = clase === 'Altura';
+
+      if (esPiso) {
+        skuStats[sku].piso += cant;
         tipoAPiso += cant;
         tipoAPisoSku.add(sku);
-      } else if (clase === 'Altura') {
+      }
+      if (esAltura) {
+        skuStats[sku].altura += cant;
         tipoAAltura += cant;
         tipoAAlturaSku.add(sku);
-        datosParaDescargar.bajar.push({ SKU: sku, Ubicacion: ubicacion, Cantidad: cant, Marca: marca, Descripcion: descrip });
       }
-    } else if (rotacion === 'Sin Rotacion' || rotacion === 'Sin rotacion') {
+      skuStats[sku].total += cant;
+      skuStats[sku].ubicaciones.push({
+        ubicacion,
+        cantidad: cant,
+        clase,
+        marca,
+        descrip
+      });
+    }
+
+    if (rotacion === 'Sin Rotacion' || rotacion === 'Sin rotacion') {
       if (['Piso', 'Balda Picking', 'Balda Chica'].includes(clase)) {
         srPiso += cant;
         srPisoSku.add(sku);
-        datosParaDescargar.subir.push({ SKU: sku, Ubicacion: ubicacion, Cantidad: cant, Marca: marca, Descripcion: descrip });
+        datosCompletos.bajar.push({ SKU: sku, Ubicacion: ubicacion, Cantidad: cant, Marca: marca, Descripcion: descrip, PorcPiso: 0, PorcAltura: 0, Total: cant });
       } else if (clase === 'Altura') {
         srAltura += cant;
         srAlturaSku.add(sku);
       }
     }
   });
+
+  // Generar datos para descargar con percentages
+  datosCompletos.bajar = [];
+  Object.entries(skuStats).forEach(([sku, stats]) => {
+    if (stats.altura > 0) {
+      const porcPiso = stats.total > 0 ? Math.round((stats.piso / stats.total) * 100) : 0;
+      const porcAltura = stats.total > 0 ? Math.round((stats.altura / stats.total) * 100) : 0;
+      
+      let priority = 'low';
+      if (porcAltura === 100) priority = 'critical';
+      else if (porcAltura >= 70) priority = 'high';
+      else if (porcAltura >= 50) priority = 'medium';
+
+      datosCompletos.bajar.push({
+        SKU: sku,
+        Ubicacion: stats.ubicaciones[0]?.ubicacion || '',
+        Cantidad: stats.altura,
+        Marca: stats.marca,
+        Descripcion: stats.descrip,
+        TotalStock: stats.total,
+        PorcPiso: porcPiso,
+        PorcAltura: porcAltura,
+        Prioridad: priority
+      });
+    }
+  });
+
+  datosCompletos.bajar.sort((a, b) => b.PorcAltura - a.PorcAltura);
+
+  // Extraer marcas únicas para el filtro
+  marcasUnicas = [...new Set(Object.values(skuStats).map(s => s.marca).filter(Boolean))].sort();
+  populateMarcaFilter();
 
   const totalSkus = Object.values(skusPorRotacion).reduce((sum, set) => sum + set.size, 0);
   const totalUnidades = Object.values(unidadesPorRotacion).reduce((sum, val) => sum + val, 0);
@@ -820,6 +990,31 @@ function processData(data) {
   updateCharts(unidadesPorRotacion, tipoAPiso, tipoAAltura, srPiso, srAltura, marcasData);
 }
 
+function applyFilters() {
+  const minAltura = parseInt(document.getElementById('filterAltitud').value);
+  const minStock = parseInt(document.getElementById('minStock').value) || 1;
+  const marcaSeleccionada = document.getElementById('filterMarca').value;
+
+  datosCompletos.filtrados = datosCompletos.bajar.filter(item => {
+    const cumpleMarca = marcaSeleccionada === 'todas' || item.Marca === marcaSeleccionada;
+    return cumpleMarca && item.PorcAltura >= minAltura && item.Cantidad >= minStock;
+  });
+
+  const countSpan = document.getElementById('filterResultCount');
+  countSpan.textContent = `(${datosCompletos.filtrados.length} SKUs encontrados)`;
+}
+
+function populateMarcaFilter() {
+  const select = document.getElementById('filterMarca');
+  select.innerHTML = '<option value="todas">Todas las marcas</option>';
+  marcasUnicas.forEach(marca => {
+    const option = document.createElement('option');
+    option.value = marca;
+    option.textContent = marca;
+    select.appendChild(option);
+  });
+}
+
 function updateKPI(elementId, value, total) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   document.getElementById(elementId).textContent = value.toLocaleString();
@@ -827,37 +1022,45 @@ function updateKPI(elementId, value, total) {
 }
 
 function downloadExcelBajar() {
-  if (datosParaDescargar.bajar.length === 0) {
-    alert('No hay SKUs Tipo A en altura para bajar');
+  const datos = datosCompletos.filtrados.length > 0 ? datosCompletos.filtrados : datosCompletos.bajar;
+  
+  if (datos.length === 0) {
+    alert('No hay SKUs para descargar');
     return;
   }
-  downloadExcel(datosParaDescargar.bajar, 'SKUs_a_Bajar_a_Piso.xlsx');
+
+  const datosOrdenados = [...datos].sort((a, b) => {
+    const prioridadOrden = { critical: 0, high: 1, medium: 2, low: 3 };
+    return prioridadOrden[a.Prioridad] - prioridadOrden[b.Prioridad];
+  });
+
+  downloadExcel(datosOrdenados, 'SKUs_a_Bajar_a_Piso.xlsx');
 }
 
 function downloadExcelSubir() {
-  if (datosParaDescargar.subir.length === 0) {
+  if (datosCompletos.subir.length === 0) {
     alert('No hay SKUs Sin Rotación en piso para subir');
     return;
   }
-  downloadExcel(datosParaDescargar.subir, 'SKUs_a_Subir_a_Altura.xlsx');
+  downloadExcel(datosCompletos.subir, 'SKUs_a_Subir_a_Altura.xlsx');
 }
 
 function downloadExcel(datos, filename) {
   try {
-    // Crear CSV como alternativa si XLSX no está disponible
-    let csv = 'SKU,Ubicación,Cantidad,Marca,Descripción\n';
+    let csv = 'SKU,Ubicación,Cantidad,Marca,Descripción,Total Stock,% Piso,% Altura,Prioridad\n';
     datos.forEach(row => {
-      csv += `"${row.SKU || ''}","${row.Ubicacion || ''}",${row.Cantidad || 0},"${row.Marca || ''}","${row.Descripcion || ''}"\n`;
+      const prioridadTexto = row.Prioridad === 'critical' ? 'CRÍTICA' : 
+                           row.Prioridad === 'high' ? 'ALTA' : 
+                           row.Prioridad === 'medium' ? 'MEDIA' : 'BAJA';
+      csv += `"${row.SKU || ''}","${row.Ubicacion || ''}",${row.Cantidad || 0},"${row.Marca || ''}","${row.Descripcion || ''}",${row.TotalStock || 0},${row.PorcPiso || 0}%,${row.PorcAltura || 0}%,${prioridadTexto}\n`;
     });
     
-    // Intentar con XLSX primero
     if (window.XLSX) {
       const ws = XLSX.utils.json_to_sheet(datos);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Datos");
       XLSX.writeFile(wb, filename);
     } else {
-      // Fallback a CSV
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -885,7 +1088,6 @@ function updateMarcasTable(marcasData) {
   });
 
   marcasArray.forEach(([marca, tipos]) => {
-
     const skuA = tipos.A.size;
     const skuB = tipos.B.size;
     const skuC = tipos.C.size;
