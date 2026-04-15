@@ -383,21 +383,29 @@
   }
 
   function detectLocationColumn(data, columns) {
-    const locKeywords = ['UBICACION', 'UBICACIÓN', 'BIN', 'LOCATION', 'POSICION', 'ALTURA', 'RACK'];
+    const locKeywords = ['LOC', 'UBICACION', 'UBICACIÓN', 'BIN', 'LOCATION', 'POSICION', 'ALTURA', 'RACK', 'WAREHOUSE'];
     
-    // Búsqueda por nombre de columna
+    // Búsqueda por nombre de columna (exacta primero)
+    for (let col of columns) {
+      if (col.toUpperCase() === 'LOC') {
+        return col;
+      }
+    }
+    
+    // Búsqueda por nombre de columna (parcial)
     for (let col of columns) {
       if (locKeywords.some(kw => col.toUpperCase().includes(kw))) {
         return col;
       }
     }
     
-    // Búsqueda por contenido (buscar patrones de ubicación)
+    // Búsqueda por contenido (buscar patrones de ubicación con letras y números)
     for (let col of columns) {
-      const samples = data.slice(0, Math.min(10, data.length)).map(row => String(row[col] || '').trim());
-      const alturaPattern = samples.filter(s => /^[RSTUVW]\d+/i.test(s)).length;
+      const samples = data.slice(0, Math.min(20, data.length)).map(row => String(row[col] || '').trim()).filter(s => s);
+      // Buscar patrones: letras seguidas de números, con o sin guiones (ej: H2-012, RR4-004, S5-028, etc)
+      const locationPattern = samples.filter(s => /^[A-Z]{1,3}\d+[-]?\d*$/i.test(s) || /^[A-Z]{1,3}[-]?\d+$/i.test(s)).length;
       
-      if (alturaPattern >= samples.length * 0.5) {
+      if (samples.length > 0 && locationPattern >= samples.length * 0.6) {
         return col;
       }
     }
@@ -434,19 +442,19 @@
       return Object.values(row).some(val => val !== null && val !== undefined && val !== '');
     });
 
-    // Contar registros por ubicación (solo altura: R, S, T, U, V, W)
+    // Contar registros por ubicación (todas las ubicaciones con formato válido)
     const counts = {};
-    const alturaRegex = /^[RSTUVW]/i;
+    const locationRegex = /^[A-Z]{1,3}\d+[-]?\d*$/i; // Acepta: H2-012, RR4-004, S5-028, etc
 
     cleanData.forEach(row => {
       const loc = String(row[locCol] || '').trim();
-      if (alturaRegex.test(loc)) {
+      if (loc && locationRegex.test(loc)) {
         counts[loc] = (counts[loc] || 0) + 1;
       }
     });
 
     if (Object.keys(counts).length === 0) {
-      alert('No se encontraron ubicaciones de altura (R, S, T, U, V, W) en la columna: ' + locCol);
+      alert('No se encontraron ubicaciones válidas en la columna: ' + locCol + '\n\nFormato esperado: Letras seguidas de números (ej: H2-012, RR4-004)');
       loadingOverlay.style.display = 'none';
       resetDashboard();
       return;
