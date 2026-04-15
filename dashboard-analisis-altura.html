@@ -119,15 +119,52 @@
     font-weight: 600;
   }
   .column-btn:hover { border-color: var(--primary); background: #eff6ff; }
-  .modal-actions { display: flex; gap: 10px; }
-  .btn-modal { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; flex: 1; }
-  .btn-modal-primary { background: var(--primary); color: white; }
-  .btn-modal-primary:hover { background: var(--primary-dark); }
-  .btn-modal-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-  .btn-modal-secondary:hover { background: var(--border); }
 
   /* Dashboard Content */
   #dashboardContent { display: none; }
+  
+  .filter-bar {
+    background: var(--surface);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 30px;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-label { font-weight: 600; font-size: 14px; }
+
+  .filter-btn {
+    padding: 8px 16px;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover { border-color: var(--primary); }
+
+  .filter-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  .filter-btn.unificable { border-color: var(--warning); }
+  .filter-btn.unificable.active { background: var(--warning); }
+
+  .filter-btn.normal { border-color: var(--success); }
+  .filter-btn.normal.active { background: var(--success); }
+
+  .filter-btn.excedida { border-color: var(--danger); }
+  .filter-btn.excedida.active { background: var(--danger); }
+
   .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
   .kpi-card { background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
   .kpi-label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.5px; }
@@ -159,11 +196,16 @@
   .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+  .table-header-actions { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }
+  .search-box { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; flex: 1; min-width: 200px; }
+
   @media (max-width: 768px) {
     .header { padding: 0 15px; }
     .header-title { font-size: 18px; }
     .kpi-grid { grid-template-columns: 1fr; }
-    .actions-header { flex-direction: column; }
+    .filter-bar { flex-direction: column; }
+    .table-header-actions { flex-direction: column; align-items: stretch; }
+    .search-box { min-width: auto; }
   }
 </style>
 </head>
@@ -176,12 +218,14 @@
 
 <div class="modal-overlay" id="columnSelector">
   <div class="modal-content">
-    <h2 class="modal-title">Selecciona la columna de Ubicación</h2>
-    <p class="modal-text">No pudimos detectar automáticamente la columna. Por favor, selecciona cuál contiene las ubicaciones:</p>
-    <div class="column-options" id="columnOptions"></div>
-    <div class="modal-actions">
-      <button class="btn-modal btn-modal-secondary" onclick="cancelColumnSelection()">Cancelar</button>
-    </div>
+    <h2 class="modal-title">Selecciona las columnas necesarias</h2>
+    <p class="modal-text">Necesitamos identificar dos columnas en tu archivo:</p>
+    
+    <p style="margin-top: 20px; margin-bottom: 10px; font-weight: 600;">1. Columna de Ubicación (LOC):</p>
+    <div class="column-options" id="columnOptionsLoc"></div>
+    
+    <p style="margin-top: 20px; margin-bottom: 10px; font-weight: 600;">2. Columna de Clase Loc (para filtrar solo Altura):</p>
+    <div class="column-options" id="columnOptionsClase"></div>
   </div>
 </div>
 
@@ -211,18 +255,28 @@
       <h3>¿Cómo usar este dashboard?</h3>
       <ul>
         <li>✅ Arrastra tu archivo Excel (.xlsx) al área de carga.</li>
-        <li>✅ El sistema detectará automáticamente la columna de ubicación.</li>
-        <li>✅ Se analizarán las ubicaciones de altura (Zonas R, S, T, U, V, W).</li>
-        <li>✅ Clasificación: Unificables (≤20), Normales (21-40) y Excedidas (>40).</li>
+        <li>✅ El sistema detectará automáticamente las columnas LOC y Clase Loc.</li>
+        <li>✅ Se analizarán solo las ubicaciones marcadas como "Altura".</li>
+        <li>✅ Podrás filtrar por estado: Unificables (≤20), Normales (21-40) y Excedidas (>40).</li>
+        <li>✅ Descarga solo los datos que necesites.</li>
       </ul>
     </div>
   </div>
 
   <!-- Dashboard Content -->
   <div id="dashboardContent">
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <span class="filter-label">Filtrar por estado:</span>
+      <button class="filter-btn active" onclick="filterByStatus('all')">📊 Todos</button>
+      <button class="filter-btn unificable" onclick="filterByStatus('Unificable')">🔶 Unificables</button>
+      <button class="filter-btn normal" onclick="filterByStatus('Normal')">✅ Normales</button>
+      <button class="filter-btn excedida" onclick="filterByStatus('Excedida')">⚠️ Excedidas</button>
+    </div>
+
     <div class="kpi-grid">
       <div class="kpi-card">
-        <p class="kpi-label">Total Ubicaciones</p>
+        <p class="kpi-label">Total Ubicaciones (Altura)</p>
         <p class="kpi-value" id="kpiTotalUbicaciones">0</p>
         <p class="kpi-sub" id="kpiTotalRegistros">0 registros totales</p>
       </div>
@@ -251,9 +305,9 @@
     </div>
 
     <div class="table-container">
-      <div style="padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+      <div class="table-header-actions">
         <h2 class="section-title" style="margin:0;">Detalle de Ubicaciones</h2>
-        <input type="text" id="tableSearch" placeholder="Buscar ubicación..." style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; width: 250px;">
+        <input type="text" id="tableSearch" placeholder="Buscar ubicación..." class="search-box">
       </div>
       <table id="locationsTable">
         <thead>
@@ -274,9 +328,13 @@
 
 <script>
   let processedData = null;
+  let allData = null;
   let chartInstance = null;
   let currentData = null;
   let allColumns = [];
+  let currentFilter = 'all';
+  let locCol = null;
+  let claseLocCol = null;
 
   // Elements
   const fileInput = document.getElementById('fileInput');
@@ -288,7 +346,6 @@
   const tableBody = document.getElementById('tableBody');
   const tableSearch = document.getElementById('tableSearch');
   const columnSelector = document.getElementById('columnSelector');
-  const columnOptions = document.getElementById('columnOptions');
 
   // Drag & Drop events
   ['dragenter', 'dragover'].forEach(name => {
@@ -331,10 +388,8 @@
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        // Leer como array para encontrar encabezados
         const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
         
-        // Encontrar primera fila con datos
         let headerRowIndex = 0;
         for (let i = 0; i < rawData.length; i++) {
           const row = rawData[i];
@@ -344,7 +399,6 @@
           }
         }
         
-        // Leer desde esa fila
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex });
         currentData = jsonData;
         
@@ -366,95 +420,93 @@
       return;
     }
 
-    // Obtener todas las columnas
     allColumns = Object.keys(data[0]);
     
-    // Intentar detectar automáticamente
-    let locCol = detectLocationColumn(data, allColumns);
+    // Detectar columnas
+    locCol = detectColumn(data, allColumns, ['LOC', 'UBICACION', 'UBICACIÓN', 'BIN', 'LOCATION']);
+    claseLocCol = detectColumn(data, allColumns, ['CLASE LOC', 'CLASE', 'TIPO', 'CATEGORY', 'CLASE UBICACION']);
     
-    if (!locCol) {
-      // Mostrar selector manual
+    if (!locCol || !claseLocCol) {
       loadingOverlay.style.display = 'none';
       showColumnSelector(allColumns);
       return;
     }
 
-    processWithColumn(locCol);
+    processWithColumns(locCol, claseLocCol);
   }
 
-  function detectLocationColumn(data, columns) {
-    const locKeywords = ['LOC', 'UBICACION', 'UBICACIÓN', 'BIN', 'LOCATION', 'POSICION', 'ALTURA', 'RACK', 'WAREHOUSE'];
-    
-    // Búsqueda por nombre de columna (exacta primero)
+  function detectColumn(data, columns, keywords) {
     for (let col of columns) {
-      if (col.toUpperCase() === 'LOC') {
+      if (keywords.some(kw => col.toUpperCase().includes(kw))) {
         return col;
       }
     }
-    
-    // Búsqueda por nombre de columna (parcial)
-    for (let col of columns) {
-      if (locKeywords.some(kw => col.toUpperCase().includes(kw))) {
-        return col;
-      }
-    }
-    
-    // Búsqueda por contenido (buscar patrones de ubicación con letras y números)
-    for (let col of columns) {
-      const samples = data.slice(0, Math.min(20, data.length)).map(row => String(row[col] || '').trim()).filter(s => s);
-      // Buscar patrones: letras seguidas de números, con o sin guiones (ej: H2-012, RR4-004, S5-028, etc)
-      const locationPattern = samples.filter(s => /^[A-Z]{1,3}\d+[-]?\d*$/i.test(s) || /^[A-Z]{1,3}[-]?\d+$/i.test(s)).length;
-      
-      if (samples.length > 0 && locationPattern >= samples.length * 0.6) {
-        return col;
-      }
-    }
-    
     return null;
   }
 
   function showColumnSelector(columns) {
-    columnOptions.innerHTML = '';
+    const locOptions = document.getElementById('columnOptionsLoc');
+    const claseOptions = document.getElementById('columnOptionsClase');
+    
+    locOptions.innerHTML = '';
+    claseOptions.innerHTML = '';
+    
     columns.forEach(col => {
-      const btn = document.createElement('button');
-      btn.className = 'column-btn';
-      btn.textContent = col;
-      btn.onclick = () => {
-        processWithColumn(col);
-        columnSelector.classList.remove('active');
+      const btnLoc = document.createElement('button');
+      btnLoc.className = 'column-btn';
+      btnLoc.textContent = col;
+      btnLoc.onclick = () => {
+        locCol = col;
+        if (claseLocCol) processWithColumns(locCol, claseLocCol);
       };
-      columnOptions.appendChild(btn);
+      locOptions.appendChild(btnLoc);
+      
+      const btnClase = document.createElement('button');
+      btnClase.className = 'column-btn';
+      btnClase.textContent = col;
+      btnClase.onclick = () => {
+        claseLocCol = col;
+        if (locCol) processWithColumns(locCol, claseLocCol);
+      };
+      claseOptions.appendChild(btnClase);
     });
+    
     columnSelector.classList.add('active');
   }
 
-  function cancelColumnSelection() {
-    columnSelector.classList.remove('active');
-    loadingOverlay.style.display = 'none';
-    resetDashboard();
-  }
-
-  function processWithColumn(locCol) {
+  function processWithColumns(locColName, claseLocColName) {
     loadingOverlay.style.display = 'flex';
     
-    // Filtrar filas vacías
     const cleanData = currentData.filter(row => {
       return Object.values(row).some(val => val !== null && val !== undefined && val !== '');
     });
 
-    // Contar registros por ubicación (todas las ubicaciones con formato válido)
-    const counts = {};
-    const locationRegex = /^[A-Z]{1,3}\d+[-]?\d*$/i; // Acepta: H2-012, RR4-004, S5-028, etc
+    // Filtrar solo ubicaciones de altura
+    const alturaData = cleanData.filter(row => {
+      const claseValue = String(row[claseLocColName] || '').trim().toUpperCase();
+      return claseValue === 'ALTURA' || claseValue.includes('ALTURA');
+    });
 
-    cleanData.forEach(row => {
-      const loc = String(row[locCol] || '').trim();
+    if (alturaData.length === 0) {
+      alert('No se encontraron ubicaciones marcadas como "Altura" en la columna: ' + claseLocColName);
+      loadingOverlay.style.display = 'none';
+      resetDashboard();
+      return;
+    }
+
+    // Contar registros por ubicación
+    const counts = {};
+    const locationRegex = /^[A-Z]{1,3}\d+[-]?\d*$/i;
+
+    alturaData.forEach(row => {
+      const loc = String(row[locColName] || '').trim();
       if (loc && locationRegex.test(loc)) {
         counts[loc] = (counts[loc] || 0) + 1;
       }
     });
 
     if (Object.keys(counts).length === 0) {
-      alert('No se encontraron ubicaciones válidas en la columna: ' + locCol + '\n\nFormato esperado: Letras seguidas de números (ej: H2-012, RR4-004)');
+      alert('No se encontraron ubicaciones válidas en la columna: ' + locColName);
       loadingOverlay.style.display = 'none';
       resetDashboard();
       return;
@@ -478,7 +530,7 @@
       return { name, count, status, badgeClass, action };
     }).sort((a, b) => b.count - a.count);
 
-    const stats = {
+    allData = {
       totalUbicaciones: locations.length,
       totalRegistros: Object.values(counts).reduce((a, b) => a + b, 0),
       unificables: locations.filter(l => l.status === 'Unificable').length,
@@ -487,24 +539,41 @@
       ubicaciones: locations
     };
 
-    processedData = stats;
-    updateDashboard(stats);
+    updateDashboard();
   }
 
-  function updateDashboard(stats) {
-    document.getElementById('kpiTotalUbicaciones').textContent = stats.totalUbicaciones;
-    document.getElementById('kpiTotalRegistros').textContent = stats.totalRegistros.toLocaleString() + ' registros totales';
-    document.getElementById('kpiUnificables').textContent = stats.unificables;
-    document.getElementById('kpiNormales').textContent = stats.normales;
-    document.getElementById('kpiExcedidas').textContent = stats.excedidas;
+  function updateDashboard() {
+    document.getElementById('kpiTotalUbicaciones').textContent = allData.totalUbicaciones;
+    document.getElementById('kpiTotalRegistros').textContent = allData.totalRegistros.toLocaleString() + ' registros totales';
+    document.getElementById('kpiUnificables').textContent = allData.unificables;
+    document.getElementById('kpiNormales').textContent = allData.normales;
+    document.getElementById('kpiExcedidas').textContent = allData.excedidas;
 
-    renderTable(stats.ubicaciones);
-    renderChart(stats);
+    renderChart();
+    filterByStatus('all');
 
     uploadSection.style.display = 'none';
     dashboardContent.style.display = 'block';
     headerActions.style.display = 'flex';
     loadingOverlay.style.display = 'none';
+  }
+
+  function filterByStatus(status) {
+    currentFilter = status;
+    
+    // Actualizar botones
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Filtrar datos
+    let filtered = allData.ubicaciones;
+    if (status !== 'all') {
+      filtered = allData.ubicaciones.filter(l => l.status === status);
+    }
+    
+    renderTable(filtered);
   }
 
   function renderTable(locations) {
@@ -521,7 +590,7 @@
     });
   }
 
-  function renderChart(stats) {
+  function renderChart() {
     const ctx = document.getElementById('distributionChart').getContext('2d');
     
     if (chartInstance) chartInstance.destroy();
@@ -531,7 +600,7 @@
       data: {
         labels: ['Unificables (≤20)', 'Normales (21-40)', 'Excedidas (>40)'],
         datasets: [{
-          data: [stats.unificables, stats.normales, stats.excedidas],
+          data: [allData.unificables, allData.normales, allData.excedidas],
           backgroundColor: ['#f97316', '#22c55e', '#ef4444'],
           borderWidth: 0
         }]
@@ -552,14 +621,21 @@
     dashboardContent.style.display = 'none';
     headerActions.style.display = 'none';
     fileInput.value = '';
-    processedData = null;
+    allData = null;
     currentData = null;
+    currentFilter = 'all';
   }
 
   function exportToExcel() {
-    if (!processedData) return;
+    if (!allData) return;
 
-    const exportData = processedData.ubicaciones.map(l => ({
+    // Obtener datos filtrados
+    let dataToExport = allData.ubicaciones;
+    if (currentFilter !== 'all') {
+      dataToExport = allData.ubicaciones.filter(l => l.status === currentFilter);
+    }
+
+    const exportData = dataToExport.map(l => ({
       'Ubicación': l.name,
       'Cantidad de Registros': l.count,
       'Estado': l.status,
@@ -570,7 +646,8 @@
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Análisis de Altura");
     
-    const fileName = `Analisis_Altura_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const filterName = currentFilter === 'all' ? 'Completo' : currentFilter;
+    const fileName = `Analisis_Altura_${filterName}_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
   }
 
