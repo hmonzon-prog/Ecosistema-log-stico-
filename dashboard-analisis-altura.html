@@ -10,201 +10,53 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <style>
   :root {
-    --primary: #1a56db;
-    --primary-dark: #1e429f;
-    --success: #057a55;
-    --warning: #d97706;
-    --danger: #c81e1e;
-    --bg: #f8f9fa;
-    --surface: #ffffff;
-    --text: #111827;
-    --text-muted: #6b7280;
-    --border: #e2e6ea;
-    --font-display: 'Barlow Condensed', sans-serif;
-    --font-body: 'Barlow', sans-serif;
+    --primary: #1a56db; --primary-dark: #1e429f; --success: #057a55; --warning: #d97706; --danger: #c81e1e;
+    --bg: #f8f9fa; --surface: #ffffff; --text: #111827; --text-muted: #6b7280; --border: #e2e6ea;
+    --font-display: 'Barlow Condensed', sans-serif; --font-body: 'Barlow', sans-serif;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; }
-
-  .header {
-    background: var(--surface);
-    border-bottom: 3px solid var(--primary);
-    padding: 0 30px;
-    height: 72px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
+  .header { background: var(--surface); border-bottom: 3px solid var(--primary); padding: 0 30px; height: 72px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: sticky; top: 0; z-index: 100; }
   .header-left { display: flex; align-items: center; gap: 20px; }
-  .back-btn {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.2s;
-  }
-  .back-btn:hover { background: var(--border); }
+  .back-btn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.2s; }
   .header-title { font-family: var(--font-display); font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
   .header-title span { color: var(--primary); }
-
   .main { padding: 30px; max-width: 1400px; margin: 0 auto; }
-
-  .upload-container {
-    max-width: 600px;
-    margin: 40px auto;
-    background: var(--surface);
-    padding: 40px;
-    border-radius: 16px;
-    border: 2px dashed var(--border);
-    text-align: center;
-    transition: all 0.3s;
-  }
+  .upload-container { max-width: 600px; margin: 40px auto; background: var(--surface); padding: 40px; border-radius: 16px; border: 2px dashed var(--border); text-align: center; }
   .upload-container.dragover { border-color: var(--primary); background: #eff6ff; }
   .upload-icon { font-size: 48px; margin-bottom: 20px; display: block; }
   .upload-title { font-family: var(--font-display); font-size: 24px; font-weight: 700; margin-bottom: 10px; }
-  .upload-text { color: var(--text-muted); margin-bottom: 30px; }
-  .file-input { display: none; }
-  .upload-btn {
-    background: var(--primary);
-    color: white;
-    padding: 12px 30px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-block;
-    transition: background 0.2s;
-    border: none;
-  }
-  .upload-btn:hover { background: var(--primary-dark); }
-
-  .instructions {
-    max-width: 600px;
-    margin: 20px auto;
-    background: #eff6ff;
-    padding: 20px;
-    border-radius: 12px;
-    border: 1px solid #bfdbfe;
-  }
-  .instructions h3 { font-size: 16px; color: #1e40af; margin-bottom: 10px; }
-  .instructions ul { list-style: none; font-size: 14px; color: #1e40af; }
-  .instructions li { margin-bottom: 8px; display: flex; gap: 8px; }
-
+  .upload-btn { background: var(--primary); color: white; padding: 12px 30px; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-block; border: none; }
+  .instructions { max-width: 600px; margin: 20px auto; background: #eff6ff; padding: 20px; border-radius: 12px; border: 1px solid #bfdbfe; font-size: 14px; color: #1e40af; }
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
   .modal-overlay.active { display: flex; }
   .modal-content { background: var(--surface); padding: 40px; border-radius: 16px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
-  .modal-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; margin-bottom: 15px; }
-  .modal-text { color: var(--text-muted); margin-bottom: 25px; font-size: 14px; }
-  .column-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; }
-  .column-btn {
-    padding: 12px 16px;
-    border: 2px solid var(--border);
-    background: var(--surface);
-    border-radius: 8px;
-    cursor: pointer;
-    text-align: left;
-    transition: all 0.2s;
-    font-weight: 600;
-    font-size: 13px;
-  }
+  .column-options { display: flex; flex-direction: column; gap: 10px; margin: 15px 0 25px; }
+  .column-btn { padding: 12px 16px; border: 2px solid var(--border); background: var(--surface); border-radius: 8px; cursor: pointer; text-align: left; font-weight: 600; }
   .column-btn:hover { border-color: var(--primary); background: #eff6ff; }
-
   #dashboardContent { display: none; }
-  
-  .filter-bar {
-    background: var(--surface);
-    padding: 20px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    margin-bottom: 30px;
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  .filter-label { font-weight: 600; font-size: 14px; }
-
-  .filter-btn {
-    padding: 10px 18px;
-    border: 2px solid var(--border);
-    background: var(--surface);
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 13px;
-    transition: all 0.2s;
-  }
-
-  .filter-btn:hover { border-color: var(--primary); }
-
-  .filter-btn.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-  }
-
-  .filter-btn.unificable { border-color: var(--warning); }
+  .filter-bar { background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 30px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+  .filter-btn { padding: 10px 18px; border: 2px solid var(--border); background: var(--surface); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
   .filter-btn.unificable.active { background: var(--warning); border-color: var(--warning); }
-
-  .filter-btn.normal { border-color: var(--success); }
   .filter-btn.normal.active { background: var(--success); border-color: var(--success); }
-
-  .filter-btn.excedida { border-color: var(--danger); }
   .filter-btn.excedida.active { background: var(--danger); border-color: var(--danger); }
-
   .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
-  .kpi-card { background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-  .kpi-label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.5px; }
-  .kpi-value { font-family: var(--font-display); font-size: 36px; font-weight: 900; line-height: 1; }
-  .kpi-sub { font-size: 12px; margin-top: 8px; color: var(--text-muted); }
-
+  .kpi-card { background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); }
+  .kpi-label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+  .kpi-value { font-family: var(--font-display); font-size: 36px; font-weight: 900; }
   .chart-section { background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 30px; }
-  .section-title { font-family: var(--font-display); font-size: 20px; font-weight: 800; text-transform: uppercase; margin-bottom: 20px; color: var(--primary); }
-
   .table-container { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
   table { width: 100%; border-collapse: collapse; }
   th { background: #f9fafb; padding: 12px 20px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
   td { padding: 14px 20px; border-bottom: 1px solid var(--border); font-size: 14px; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover { background: #f9fafb; }
-
   .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
   .badge-unificable { background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; }
   .badge-normal { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
   .badge-excedida { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
-
-  .actions-header { display: flex; gap: 10px; }
-  .btn-action { padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--surface); transition: all 0.2s; }
-  .btn-action:hover { background: var(--bg); }
-  .btn-primary { background: var(--primary); color: white; border: none; }
-  .btn-primary:hover { background: var(--primary-dark); }
-
-  .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: none; align-items: center; justify-content: center; z-index: 999; flex-direction: column; gap: 15px; }
+  .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: none; align-items: center; justify-content: center; z-index: 2000; flex-direction: column; gap: 15px; }
   .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-  .table-header-actions { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }
-  .search-box { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; flex: 1; min-width: 200px; }
-
-  @media (max-width: 768px) {
-    .header { padding: 0 15px; }
-    .header-title { font-size: 18px; }
-    .kpi-grid { grid-template-columns: 1fr; }
-    .filter-bar { flex-direction: column; }
-    .table-header-actions { flex-direction: column; align-items: stretch; }
-    .search-box { min-width: auto; }
-  }
 </style>
 </head>
 <body>
@@ -214,25 +66,23 @@
   <p>Procesando archivo...</p>
 </div>
 
-<div class="modal-overlay" id="columnSelector">
+<div class="modal-overlay" id="columnSelectorModal">
   <div class="modal-content">
-    <h2 class="modal-title">Selecciona las columnas</h2>
-    <p class="modal-text">Por favor, selecciona la columna que contiene las ubicaciones (LOC):</p>
-    <div class="column-options" id="columnOptionsLoc"></div>
-    
-    <p class="modal-text" style="margin-top: 30px;">Ahora selecciona la columna que indica el tipo de ubicación (Clase Loc):</p>
-    <div class="column-options" id="columnOptionsClase"></div>
+    <h2 style="font-family: var(--font-display); margin-bottom: 10px;">Configuración de Columnas</h2>
+    <p id="selectorMessage" style="font-size: 14px; color: var(--text-muted);"></p>
+    <div class="column-options" id="columnOptions"></div>
+    <button class="upload-btn" style="width: 100%; background: var(--text-muted);" onclick="location.reload()">Cancelar y Reintentar</button>
   </div>
 </div>
 
 <header class="header">
   <div class="header-left">
     <a href="index.html" class="back-btn">← Volver</a>
-    <h1 class="header-title">Análisis de <span>Altura</span></h1>
+    <h1 class="header-title">Análisis de <span>Altura</span> v4.0</h1>
   </div>
-  <div class="actions-header" id="headerActions" style="display:none;">
-    <button class="btn-action btn-primary" onclick="exportToExcel()">📥 Descargar Excel</button>
-    <button class="btn-action" onclick="resetDashboard()">🔄 Nueva Carga</button>
+  <div class="actions-header" id="headerActions" style="display:none; gap:10px;">
+    <button class="btn-action btn-primary" onclick="exportToExcel()" style="padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; background: var(--primary); color: white; border: none;">📥 Descargar</button>
+    <button class="btn-action" onclick="location.reload()" style="padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; background: white; border: 1px solid var(--border);">🔄 Nueva Carga</button>
   </div>
 </header>
 
@@ -241,355 +91,203 @@
     <div class="upload-container" id="dropZone">
       <span class="upload-icon">📊</span>
       <h2 class="upload-title">Cargar Reporte de Stock</h2>
-      <p class="upload-text">Arrastra tu archivo Excel (.xlsx) o haz clic para buscar</p>
+      <p style="color: var(--text-muted); margin-bottom: 30px;">Arrastra tu archivo Excel (.xlsx) o haz clic abajo</p>
       <input type="file" id="fileInput" class="file-input" accept=".xlsx, .xls">
       <button class="upload-btn" onclick="document.getElementById('fileInput').click()">Seleccionar Archivo</button>
     </div>
-
     <div class="instructions">
-      <h3>¿Cómo usar este dashboard?</h3>
-      <ul>
-        <li>✅ Carga tu archivo Excel con columnas LOC y Clase Loc.</li>
-        <li>✅ Se procesarán solo las ubicaciones marcadas como "Altura".</li>
-        <li>✅ Filtra por estado: Unificables, Normales o Excedidas.</li>
-        <li>✅ Descarga solo los datos que necesites.</li>
-      </ul>
+      <p><strong>Instrucciones:</strong> El sistema detectará automáticamente las columnas <strong>LOC</strong> y <strong>Clase Loc</strong>. Solo se analizarán las ubicaciones marcadas como <strong>"Altura"</strong>.</p>
     </div>
   </div>
 
   <div id="dashboardContent">
     <div class="filter-bar">
-      <span class="filter-label">Filtrar por estado:</span>
-      <button class="filter-btn active" data-filter="all" onclick="applyFilter(this, 'all')">📊 Todos</button>
-      <button class="filter-btn unificable" data-filter="Unificable" onclick="applyFilter(this, 'Unificable')">🔶 Unificables</button>
-      <button class="filter-btn normal" data-filter="Normal" onclick="applyFilter(this, 'Normal')">✅ Normales</button>
-      <button class="filter-btn excedida" data-filter="Excedida" onclick="applyFilter(this, 'Excedida')">⚠️ Excedidas</button>
+      <span style="font-weight: 600; font-size: 14px;">Filtrar:</span>
+      <button class="filter-btn active" onclick="applyFilter(this, 'all')">Todos</button>
+      <button class="filter-btn unificable" onclick="applyFilter(this, 'Unificable')">Unificables</button>
+      <button class="filter-btn normal" onclick="applyFilter(this, 'Normal')">Normales</button>
+      <button class="filter-btn excedida" onclick="applyFilter(this, 'Excedida')">Excedidas</button>
     </div>
-
     <div class="kpi-grid">
-      <div class="kpi-card">
-        <p class="kpi-label">Total Ubicaciones (Altura)</p>
-        <p class="kpi-value" id="kpiTotalUbicaciones">0</p>
-        <p class="kpi-sub" id="kpiTotalRegistros">0 registros</p>
-      </div>
-      <div class="kpi-card" style="border-left: 4px solid var(--warning);">
-        <p class="kpi-label">Unificables (≤20)</p>
-        <p class="kpi-value" id="kpiUnificables" style="color: var(--warning);">0</p>
-        <p class="kpi-sub">Para consolidar</p>
-      </div>
-      <div class="kpi-card" style="border-left: 4px solid var(--success);">
-        <p class="kpi-label">Normales (21-40)</p>
-        <p class="kpi-value" id="kpiNormales" style="color: var(--success);">0</p>
-        <p class="kpi-sub">Rango óptimo</p>
-      </div>
-      <div class="kpi-card" style="border-left: 4px solid var(--danger);">
-        <p class="kpi-label">Excedidas (>40)</p>
-        <p class="kpi-value" id="kpiExcedidas" style="color: var(--danger);">0</p>
-        <p class="kpi-sub">Límite excedido</p>
-      </div>
+      <div class="kpi-card"><p class="kpi-label">Ubicaciones Altura</p><p class="kpi-value" id="kpiTotal">0</p></div>
+      <div class="kpi-card" style="border-left: 4px solid var(--warning);"><p class="kpi-label">Unificables</p><p class="kpi-value" id="kpiUnificables" style="color: var(--warning);">0</p></div>
+      <div class="kpi-card" style="border-left: 4px solid var(--success);"><p class="kpi-label">Normales</p><p class="kpi-value" id="kpiNormales" style="color: var(--success);">0</p></div>
+      <div class="kpi-card" style="border-left: 4px solid var(--danger);"><p class="kpi-label">Excedidas</p><p class="kpi-value" id="kpiExcedidas" style="color: var(--danger);">0</p></div>
     </div>
-
-    <div class="chart-section">
-      <h2 class="section-title">Distribución de Capacidad</h2>
-      <div style="height: 300px; position: relative;">
-        <canvas id="distributionChart"></canvas>
-      </div>
-    </div>
-
+    <div class="chart-section"><canvas id="distributionChart" height="300"></canvas></div>
     <div class="table-container">
-      <div class="table-header-actions">
-        <h2 class="section-title" style="margin:0;">Detalle de Ubicaciones</h2>
-        <input type="text" id="tableSearch" placeholder="Buscar ubicación..." class="search-box">
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Ubicación</th>
-            <th>Registros</th>
-            <th>Estado</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+      <div style="padding: 20px; border-bottom: 1px solid var(--border);"><input type="text" id="tableSearch" placeholder="Buscar ubicación..." style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; width: 100%;"></div>
+      <table><thead><tr><th>Ubicación</th><th>Registros</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="tableBody"></tbody></table>
     </div>
   </div>
 </main>
 
 <script>
-  let allData = null;
-  let rawData = null;
-  let chartInstance = null;
-  let currentFilter = 'all';
-  let selectedLocCol = null;
-  let selectedClaseCol = null;
+  let rawData = null, processedData = null, chartInstance = null, currentFilter = 'all';
+  let locCol = null, claseCol = null;
 
-  const fileInput = document.getElementById('fileInput');
-  const dropZone = document.getElementById('dropZone');
-  const uploadSection = document.getElementById('uploadSection');
-  const dashboardContent = document.getElementById('dashboardContent');
-  const headerActions = document.getElementById('headerActions');
-  const loadingOverlay = document.getElementById('loadingOverlay');
-  const tableBody = document.getElementById('tableBody');
-  const tableSearch = document.getElementById('tableSearch');
-  const columnSelector = document.getElementById('columnSelector');
+  const $ = id => document.getElementById(id);
 
-  ['dragenter', 'dragover'].forEach(evt => {
-    dropZone.addEventListener(evt, e => {
-      e.preventDefault();
-      dropZone.classList.add('dragover');
-    });
-  });
+  window.onload = () => {
+    const dropZone = $('dropZone');
+    const fileInput = $('fileInput');
 
-  ['dragleave', 'drop'].forEach(evt => {
-    dropZone.addEventListener(evt, e => {
-      e.preventDefault();
-      dropZone.classList.remove('dragover');
-    });
-  });
-
-  dropZone.addEventListener('drop', e => {
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-  });
-
-  fileInput.addEventListener('change', e => {
-    if (e.target.files[0]) handleFile(e.target.files[0]);
-  });
+    dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('dragover'); };
+    dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+    dropZone.ondrop = e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); };
+    fileInput.onchange = e => handleFile(e.target.files[0]);
+  };
 
   function handleFile(file) {
-    if (!file.name.match(/\.(xlsx|xls)$/)) {
-      alert('Por favor carga un archivo Excel válido');
-      return;
-    }
-
-    loadingOverlay.style.display = 'flex';
+    if (!file) return;
+    $('loadingOverlay').style.display = 'flex';
     const reader = new FileReader();
-
-    reader.onload = function(e) {
+    reader.onload = e => {
       try {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
         
-        let headerIdx = 0;
-        for (let i = 0; i < rows.length; i++) {
-          if (rows[i].some(cell => cell !== null && cell !== undefined && cell !== '')) {
-            headerIdx = i;
-            break;
-          }
-        }
+        let headerIdx = rows.findIndex(r => r.some(c => c !== ''));
+        rawData = XLSX.utils.sheet_to_json(sheet, { range: headerIdx === -1 ? 0 : headerIdx });
         
-        rawData = XLSX.utils.sheet_to_json(sheet, { range: headerIdx });
-        processFile();
+        if (rawData.length === 0) throw new Error("El archivo está vacío");
+        
+        const cols = Object.keys(rawData[0]);
+        locCol = cols.find(c => c.toUpperCase() === 'LOC');
+        claseCol = cols.find(c => c.toUpperCase().includes('CLASE'));
+
+        if (locCol && claseCol) {
+          analyze();
+        } else {
+          $('loadingOverlay').style.display = 'none';
+          askForColumns(cols);
+        }
       } catch (err) {
-        console.error(err);
-        alert('Error al procesar: ' + err.message);
-        loadingOverlay.style.display = 'none';
+        alert("Error: " + err.message);
+        $('loadingOverlay').style.display = 'none';
       }
     };
-
     reader.readAsArrayBuffer(file);
   }
 
-  function processFile() {
-    if (!rawData || rawData.length === 0) {
-      alert('Archivo vacío');
-      loadingOverlay.style.display = 'none';
-      return;
-    }
-
-    const cols = Object.keys(rawData[0]);
-    const locCol = cols.find(c => c.toUpperCase().includes('LOC'));
-    const claseCol = cols.find(c => c.toUpperCase().includes('CLASE'));
-
-    if (locCol && claseCol) {
-      selectedLocCol = locCol;
-      selectedClaseCol = claseCol;
-      analyzeData();
-    } else {
-      loadingOverlay.style.display = 'none';
-      showColumnSelector(cols);
-    }
-  }
-
-  function showColumnSelector(cols) {
-    const locOpts = document.getElementById('columnOptionsLoc');
-    const claseOpts = document.getElementById('columnOptionsClase');
+  function askForColumns(cols) {
+    const modal = $('columnSelectorModal');
+    const options = $('columnOptions');
+    const msg = $('selectorMessage');
+    options.innerHTML = '';
     
-    locOpts.innerHTML = '';
-    claseOpts.innerHTML = '';
-
-    cols.forEach(col => {
-      const btn1 = document.createElement('button');
-      btn1.className = 'column-btn';
-      btn1.textContent = col;
-      btn1.onclick = () => {
-        selectedLocCol = col;
-        if (selectedClaseCol) analyzeData();
-      };
-      locOpts.appendChild(btn1);
-
-      const btn2 = document.createElement('button');
-      btn2.className = 'column-btn';
-      btn2.textContent = col;
-      btn2.onclick = () => {
-        selectedClaseCol = col;
-        if (selectedLocCol) analyzeData();
-      };
-      claseOpts.appendChild(btn2);
-    });
-
-    columnSelector.classList.add('active');
+    if (!locCol) {
+      msg.textContent = "Selecciona la columna que contiene las ubicaciones (LOC):";
+      cols.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'column-btn';
+        btn.textContent = c;
+        btn.onclick = () => { locCol = c; askForColumns(cols); };
+        options.appendChild(btn);
+      });
+    } else if (!claseCol) {
+      msg.textContent = "Selecciona la columna de tipo de ubicación (Clase Loc):";
+      cols.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'column-btn';
+        btn.textContent = c;
+        btn.onclick = () => { claseCol = c; analyze(); };
+        options.appendChild(btn);
+      });
+    }
+    modal.style.display = 'flex';
   }
 
-  function analyzeData() {
-    loadingOverlay.style.display = 'flex';
-    columnSelector.classList.remove('active');
+  function analyze() {
+    $('columnSelectorModal').style.display = 'none';
+    $('loadingOverlay').style.display = 'flex';
 
-    const filtered = rawData.filter(row => {
-      const clase = String(row[selectedClaseCol] || '').trim().toUpperCase();
-      return clase === 'ALTURA' || clase.includes('ALTURA');
-    });
-
-    if (filtered.length === 0) {
-      alert('No hay ubicaciones de tipo "Altura"');
-      loadingOverlay.style.display = 'none';
+    const alturaData = rawData.filter(r => String(r[claseCol] || '').trim().toUpperCase() === 'ALTURA');
+    if (alturaData.length === 0) {
+      alert("No se encontraron filas con Clase Loc = 'Altura'");
+      $('loadingOverlay').style.display = 'none';
       return;
     }
 
     const counts = {};
-    filtered.forEach(row => {
-      const loc = String(row[selectedLocCol] || '').trim();
-      if (loc && /^[A-Z]{1,3}\d+[-]?\d*$/i.test(loc)) {
-        counts[loc] = (counts[loc] || 0) + 1;
-      }
+    alturaData.forEach(r => {
+      const l = String(r[locCol] || '').trim();
+      if (l) counts[l] = (counts[l] || 0) + 1;
     });
 
     const locations = Object.entries(counts).map(([name, count]) => {
-      let status = 'Normal';
-      let action = 'Mantener';
-      if (count <= 20) {
-        status = 'Unificable';
-        action = 'Consolidar';
-      } else if (count > 40) {
-        status = 'Excedida';
-        action = 'Dividir';
-      }
+      let status = 'Normal', action = 'Mantener';
+      if (count <= 20) { status = 'Unificable'; action = 'Consolidar'; }
+      else if (count > 40) { status = 'Excedida'; action = 'Dividir'; }
       return { name, count, status, action };
-    }).sort((a, b) => b.count - a.count);
+    }).sort((a,b) => b.count - a.count);
 
-    allData = {
+    processedData = {
       total: locations.length,
-      registros: Object.values(counts).reduce((a, b) => a + b, 0),
+      registros: Object.values(counts).reduce((a,b) => a+b, 0),
       unificables: locations.filter(l => l.status === 'Unificable').length,
       normales: locations.filter(l => l.status === 'Normal').length,
       excedidas: locations.filter(l => l.status === 'Excedida').length,
       ubicaciones: locations
     };
 
-    showDashboard();
+    render();
   }
 
-  function showDashboard() {
-    document.getElementById('kpiTotalUbicaciones').textContent = allData.total;
-    document.getElementById('kpiTotalRegistros').textContent = allData.registros + ' registros';
-    document.getElementById('kpiUnificables').textContent = allData.unificables;
-    document.getElementById('kpiNormales').textContent = allData.normales;
-    document.getElementById('kpiExcedidas').textContent = allData.excedidas;
+  function render() {
+    $('kpiTotal').textContent = processedData.total;
+    $('kpiUnificables').textContent = processedData.unificables;
+    $('kpiNormales').textContent = processedData.normales;
+    $('kpiExcedidas').textContent = processedData.excedidas;
 
-    renderChart();
-    applyFilter(document.querySelector('[data-filter="all"]'), 'all');
+    const ctx = $('distributionChart').getContext('2d');
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Unificables', 'Normales', 'Excedidas'],
+        datasets: [{ data: [processedData.unificables, processedData.normales, processedData.excedidas], backgroundColor: ['#f97316', '#22c55e', '#ef4444'], borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } }, cutout: '70%' }
+    });
 
-    uploadSection.style.display = 'none';
-    dashboardContent.style.display = 'block';
-    headerActions.style.display = 'flex';
-    loadingOverlay.style.display = 'none';
+    applyFilter(document.querySelector('.filter-btn'), 'all');
+    $('uploadSection').style.display = 'none';
+    $('dashboardContent').style.display = 'block';
+    $('headerActions').style.display = 'flex';
+    $('loadingOverlay').style.display = 'none';
   }
 
   function applyFilter(btn, status) {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentFilter = status;
-
-    let filtered = allData.ubicaciones;
-    if (status !== 'all') {
-      filtered = allData.ubicaciones.filter(l => l.status === status);
-    }
-
-    tableBody.innerHTML = '';
-    filtered.forEach(loc => {
+    const filtered = status === 'all' ? processedData.ubicaciones : processedData.ubicaciones.filter(l => l.status === status);
+    
+    const body = $('tableBody');
+    body.innerHTML = '';
+    filtered.forEach(l => {
       const tr = document.createElement('tr');
-      const badgeClass = loc.status === 'Unificable' ? 'badge-unificable' : 
-                         loc.status === 'Normal' ? 'badge-normal' : 'badge-excedida';
-      tr.innerHTML = `
-        <td style="font-weight:600;">${loc.name}</td>
-        <td>${loc.count}</td>
-        <td><span class="badge ${badgeClass}">${loc.status}</span></td>
-        <td>${loc.action}</td>
-      `;
-      tableBody.appendChild(tr);
-    });
-  }
-
-  function renderChart() {
-    const ctx = document.getElementById('distributionChart').getContext('2d');
-    if (chartInstance) chartInstance.destroy();
-
-    chartInstance = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Unificables', 'Normales', 'Excedidas'],
-        datasets: [{
-          data: [allData.unificables, allData.normales, allData.excedidas],
-          backgroundColor: ['#f97316', '#22c55e', '#ef4444'],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'right' } },
-        cutout: '70%'
-      }
+      const bCls = l.status === 'Unificable' ? 'badge-unificable' : l.status === 'Normal' ? 'badge-normal' : 'badge-excedida';
+      tr.innerHTML = `<td><strong>${l.name}</strong></td><td>${l.count}</td><td><span class="badge ${bCls}">${l.status}</span></td><td>${l.action}</td>`;
+      body.appendChild(tr);
     });
   }
 
   function exportToExcel() {
-    let toExport = allData.ubicaciones;
-    if (currentFilter !== 'all') {
-      toExport = allData.ubicaciones.filter(l => l.status === currentFilter);
-    }
-
-    const data = toExport.map(l => ({
-      'Ubicación': l.name,
-      'Registros': l.count,
-      'Estado': l.status,
-      'Acción': l.action
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(data);
+    const toExport = currentFilter === 'all' ? processedData.ubicaciones : processedData.ubicaciones.filter(l => l.status === currentFilter);
+    const ws = XLSX.utils.json_to_sheet(toExport.map(l => ({ 'Ubicación': l.name, 'Registros': l.count, 'Estado': l.status, 'Acción': l.action })));
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Altura');
-    XLSX.writeFile(wb, `Altura_${currentFilter}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, 'Análisis');
+    XLSX.writeFile(wb, `Analisis_Altura_${currentFilter}_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
-  function resetDashboard() {
-    uploadSection.style.display = 'block';
-    dashboardContent.style.display = 'none';
-    headerActions.style.display = 'none';
-    fileInput.value = '';
-    allData = null;
-    currentFilter = 'all';
-  }
-
-  tableSearch.addEventListener('input', e => {
+  $('tableSearch').oninput = e => {
     const term = e.target.value.toLowerCase();
-    Array.from(tableBody.rows).forEach(row => {
-      row.style.display = row.cells[0].textContent.toLowerCase().includes(term) ? '' : 'none';
-    });
-  });
+    Array.from($('tableBody').rows).forEach(r => r.style.display = r.cells[0].textContent.toLowerCase().includes(term) ? '' : 'none');
+  };
 </script>
-
 </body>
 </html>
