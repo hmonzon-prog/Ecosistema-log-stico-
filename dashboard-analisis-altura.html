@@ -289,9 +289,26 @@
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        // Leer datos sin encabezados para encontrar la fila de encabezados
+        const allData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Encontrar la primera fila con datos (no vacía)
+        let headerRowIndex = 0;
+        for (let i = 0; i < allData.length; i++) {
+          const row = allData[i];
+          if (row && row.some(cell => cell !== null && cell !== undefined && cell !== '')) {
+            headerRowIndex = i;
+            break;
+          }
+        }
+        
+        // Extraer datos desde la fila de encabezados encontrada
+        const dataWithHeaders = XLSX.utils.sheet_to_json(worksheet, {
+          range: headerRowIndex
+        });
 
-        processStockData(jsonData);
+        processStockData(dataWithHeaders);
       } catch (error) {
         console.error(error);
         alert('Error al procesar el archivo');
@@ -303,11 +320,23 @@
   }
 
   function processStockData(data) {
+    // Filtrar filas vacías
+    const cleanData = data.filter(row => {
+      return Object.values(row).some(val => val !== null && val !== undefined && val !== '');
+    });
+
+    if (cleanData.length === 0) {
+      alert('El archivo no contiene datos válidos');
+      loadingOverlay.style.display = 'none';
+      return;
+    }
+
     // Buscar columna de ubicación
-    const firstRow = data[0];
+    const firstRow = cleanData[0];
     let locCol = null;
-    const locKeywords = ['UBICACION', 'UBICACIÓN', 'BIN', 'LOCATION', 'POSICION'];
+    const locKeywords = ['UBICACION', 'UBICACIÓN', 'BIN', 'LOCATION', 'POSICION', 'UBICACIÓN DE ALTURA'];
     
+    // Buscar en todas las claves del primer registro
     for (let key in firstRow) {
       if (locKeywords.some(kw => key.toUpperCase().includes(kw))) {
         locCol = key;
@@ -316,7 +345,9 @@
     }
 
     if (!locCol) {
-      alert('No se encontró la columna de Ubicación');
+      // Si no encontramos por palabras clave, mostrar las columnas disponibles
+      const availableColumns = Object.keys(firstRow).join(', ');
+      alert(`No se encontró la columna de Ubicación.\n\nColumnas disponibles: ${availableColumns}`);
       loadingOverlay.style.display = 'none';
       return;
     }
@@ -325,7 +356,7 @@
     const counts = {};
     const alturaRegex = /^[RSTUVW]/i;
 
-    data.forEach(row => {
+    cleanData.forEach(row => {
       const loc = String(row[locCol] || '').trim();
       if (alturaRegex.test(loc)) {
         counts[loc] = (counts[loc] || 0) + 1;
@@ -349,6 +380,12 @@
 
       return { name, count, status, badgeClass, action };
     }).sort((a, b) => b.count - a.count);
+
+    if (Object.keys(counts).length === 0) {
+      alert('No se encontraron ubicaciones de altura (R, S, T, U, V, W) en el archivo');
+      loadingOverlay.style.display = 'none';
+      return;
+    }
 
     const stats = {
       totalUbicaciones: locations.length,
