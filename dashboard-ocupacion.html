@@ -6,6 +6,7 @@
 <title>Ocupación del Depósito — Loginter</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg:#f0f2f5; --surface:#fff; --surface2:#f7f8fa; --border:#e2e6ea;
@@ -39,7 +40,6 @@
 
   .page{display:flex;gap:0;min-height:calc(100vh - 130px);}
 
-  /* SIDEBAR */
   .sidebar{width:210px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:18px;}
   .filter-group-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
   .filter-btn{display:block;width:100%;text-align:left;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);font-size:12px;font-weight:500;cursor:pointer;margin-bottom:4px;transition:all 0.15s;color:var(--text);font-family:var(--font-body);}
@@ -48,10 +48,8 @@
   .reset-btn{display:block;width:100%;padding:8px;border-radius:7px;border:1px solid var(--border);background:#fff;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);text-align:center;transition:all 0.15s;font-family:var(--font-body);}
   .reset-btn:hover{border-color:var(--red);color:var(--red);}
 
-  /* CONTENT */
   .content{flex:1;padding:20px 24px;display:flex;flex-direction:column;gap:16px;overflow:hidden;}
 
-  /* KPI GLOBAL */
   .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
   .kpi-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-align:center;animation:fadeUp 0.4s ease both;}
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -60,8 +58,8 @@
   .kpi-box.blue .kpi-val{color:var(--accent);}
   .kpi-box.green .kpi-val{color:var(--green);}
   .kpi-box.orange .kpi-val{color:#ea580c;}
+  .kpi-box.red .kpi-val{color:#dc2626;}
 
-  /* TIPO BLOCKS */
   .tipo-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .tipo-block{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;animation:fadeUp 0.4s ease both;animation-delay:0.1s;}
   .tipo-block-name{font-family:var(--font-display);font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
@@ -71,11 +69,9 @@
   .tipo-kpi-label{font-size:10px;color:var(--muted);text-align:center;margin-top:2px;}
   .tipo-bar{height:10px;border-radius:5px;overflow:hidden;display:flex;background:#e5e7eb;}
 
-  /* CHART */
   .chart-block{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;animation:fadeUp 0.4s ease both;animation-delay:0.15s;}
   .block-title{font-family:var(--font-display);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;color:var(--text);}
 
-  /* TABLA */
   .tabla-block{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;animation:fadeUp 0.4s ease both;animation-delay:0.2s;}
   .tabla-top{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
   .tabla-top-title{font-family:var(--font-display);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;}
@@ -156,7 +152,6 @@
   <div class="hero-title">Ocupación del Depósito</div>
 </div>
 
-<!-- KPIs GLOBALES SIEMPRE ARRIBA -->
 <div style="background:#fff;border-bottom:1px solid var(--border);padding:16px 32px;display:flex;gap:12px;align-items:stretch">
   <div class="kpi-box blue" style="flex:1;animation-delay:0s">
     <div class="kpi-val" id="kpiTotal">—</div>
@@ -180,6 +175,11 @@
     <div class="kpi-label">Posiciones No Disponibles</div>
     <div style="font-size:10px;color:#ea580c;margin-top:3px">Vacías NOOK (no se pueden usar)</div>
   </div>
+  <div class="kpi-box red" id="kpiAlertBox" style="flex:1;animation-delay:0.2s;display:none;">
+    <div class="kpi-val" id="kpiNookOcup" style="color:#dc2626">—</div>
+    <div class="kpi-label">⚠️ NOOK Ocupadas</div>
+    <div style="font-size:10px;color:#dc2626;margin-top:3px">Urgente: revisar</div>
+  </div>
   <div class="kpi-box green" style="flex:1;animation-delay:0.25s;border:2px solid var(--green)">
     <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green);margin-bottom:4px">✅ Disponibles</div>
     <div class="kpi-val" id="kpiDisponibles" style="color:var(--green)">—</div>
@@ -193,11 +193,11 @@
 
 <div class="page">
 
-  <!-- SIDEBAR FILTROS -->
   <div class="sidebar">
     <div>
       <div class="filter-group-title">Sector <span style="font-size:9px;font-weight:400;color:var(--muted)">(selección múltiple)</span></div>
       <button class="filter-btn active" data-filter="sector" data-val="TODOS" onclick="toggleSector('TODOS',this)">Todos</button>
+      <button class="filter-btn" data-filter="sector" data-val="CHERY" onclick="toggleSector('CHERY',this)">CHERY</button>
       <button class="filter-btn" data-filter="sector" data-val="SELECTIVO VIEJO" onclick="toggleSector('SELECTIVO VIEJO',this)">Selectivo Viejo</button>
       <button class="filter-btn" data-filter="sector" data-val="SELECTIVO NUEVO" onclick="toggleSector('SELECTIVO NUEVO',this)">Selectivo Nuevo</button>
       <button class="filter-btn" data-filter="sector" data-val="CAJONES CHERY" onclick="toggleSector('CAJONES CHERY',this)">Cajones Chery</button>
@@ -223,13 +223,10 @@
     <button class="reset-btn" onclick="resetFiltros()" style="display:none">↺ Limpiar filtros</button>
   </div>
 
-  <!-- CONTENIDO -->
   <div class="content">
 
-    <!-- TARJETAS POR SECTOR -->
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px" id="sectorCards"></div>
 
-    <!-- TARJETA DINÁMICA SELECCIÓN MÚLTIPLE -->
     <div id="seleccionCard" style="display:none;background:#fff;border:2px solid var(--accent);border-radius:12px;padding:16px;animation:fadeUp 0.3s ease">
       <div style="font-family:var(--font-display);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);margin-bottom:12px">
         📊 Selección combinada: <span id="seleccionNombre" style="font-weight:900">—</span>
@@ -255,7 +252,6 @@
       <div style="height:8px;border-radius:4px;overflow:hidden;display:flex;background:#e5e7eb" id="selBar"></div>
     </div>
 
-    <!-- TIPO BLOCKS -->
     <div class="tipo-row">
       <div class="tipo-block">
         <div class="tipo-block-name">🏷 Picking <span class="tipo-pct-badge" id="pickingPct">—</span></div>
@@ -277,17 +273,18 @@
       </div>
     </div>
 
-    <!-- GRAFICO -->
     <div class="chart-block">
       <div class="block-title">% Ocupación por Tipo de Ubicación</div>
       <canvas id="chartTipo" height="65"></canvas>
     </div>
 
-    <!-- TABLA -->
     <div class="tabla-block">
       <div class="tabla-top">
         <div class="tabla-top-title">Detalle de Ubicaciones</div>
-        <div class="tabla-count" id="tablaCount">—</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="tabla-count" id="tablaCount">—</div>
+          <button onclick="exportExcel()" style="white-space:nowrap;padding:6px 12px;font-size:11px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600">📥 Excel</button>
+        </div>
       </div>
       <div class="tabla-wrap">
         <table>
@@ -327,7 +324,6 @@ function toggleSector(val, btn) {
     document.querySelectorAll('[data-filter="sector"]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   } else {
-    // quitar TODOS
     document.querySelector('[data-filter="sector"][data-val="TODOS"]').classList.remove('active');
     if (filtros.sectores.includes(val)) {
       filtros.sectores = filtros.sectores.filter(s => s !== val);
@@ -387,10 +383,8 @@ function renderDashboard() {
   const todos = todosLosDatos;
   const filtrados = getFiltered();
 
-  // ── TARJETAS POR SECTOR → respetan filtros de tipo y obs ──
   const sectoresUnicos = [...new Set(todos.map(r => r.sector))].sort();
 
-  // datos de sector aplicando filtros de tipo/obs (no sector ni ocup)
   function getSectorRows(sector) {
     return todos.filter(r => {
       if (r.sector !== sector) return false;
@@ -402,10 +396,14 @@ function renderDashboard() {
 
   document.getElementById('sectorCards').innerHTML = sectoresUnicos.map(s => {
     const rows = getSectorRows(s);
+    const pickingRows = rows.filter(r => r.tipo === 'PICKING');
+    const alturaRows = rows.filter(r => r.tipo === 'ALTURA');
     const v = {
       total: rows.length,
-      ocup:  rows.filter(r => r.ocup === 'OCUPADA').length,
+      ocup: rows.filter(r => r.ocup === 'OCUPADA').length,
       vacia: rows.filter(r => r.ocup === 'VACIA').length,
+      pickingVacia: pickingRows.filter(r => r.ocup === 'VACIA').length,
+      alturaVacia: alturaRows.filter(r => r.ocup === 'VACIA').length,
     };
     const p = v.total > 0 ? (v.ocup/v.total*100).toFixed(1) : '0.0';
     const color = parseFloat(p) >= 95 ? 'var(--red)' : parseFloat(p) >= 85 ? 'var(--yellow)' : 'var(--green)';
@@ -424,6 +422,14 @@ function renderDashboard() {
         <span style="font-size:11px;color:var(--green)">Vacías</span>
         <strong style="font-size:12px;color:var(--green)">${fmt(v.vacia)}</strong>
       </div>
+      <div style="font-size:10px;color:var(--muted);border-top:1px solid var(--border);padding-top:6px;margin-bottom:4px;display:flex;justify-content:space-between">
+        <span>🏷 Picking</span>
+        <span style="color:var(--green)">${fmt(v.pickingVacia)} vacías</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between">
+        <span>🏗 Altura</span>
+        <span style="color:var(--green)">${fmt(v.alturaVacia)} vacías</span>
+      </div>
       <div style="height:6px;border-radius:3px;overflow:hidden;display:flex;background:#e5e7eb;margin-bottom:6px">
         <div style="width:${v.total>0?(v.ocup/v.total*100).toFixed(1):0}%;background:var(--accent)"></div>
         <div style="width:${v.total>0?(v.vacia/v.total*100).toFixed(1):0}%;background:var(--green)"></div>
@@ -432,7 +438,6 @@ function renderDashboard() {
     </div>`;
   }).join('');
 
-  // ── TARJETA DINÁMICA → suma sectores seleccionados respetando filtros tipo/obs ──
   const selCard = document.getElementById('seleccionCard');
   if (filtros.sectores.length >= 1) {
     const selRows = todos.filter(r => {
@@ -459,11 +464,11 @@ function renderDashboard() {
     selCard.style.display = 'none';
   }
 
-  // ── KPIs GLOBALES → siempre todos los datos ──
   const total    = todos.length;
   const ocupadas = todos.filter(r => r.ocup === 'OCUPADA').length;
   const vacias   = todos.filter(r => r.ocup === 'VACIA').length;
   const nook     = todos.filter(r => r.obs  === 'NOOK').length;
+  const nookOcupadas = todos.filter(r => r.obs === 'NOOK' && r.ocup === 'OCUPADA').length;
   const disponibles = todos.filter(r => r.ocup === 'VACIA' && r.obs === 'OK').length;
   const pctOcup  = total > 0 ? (ocupadas/total*100).toFixed(2) : '0.00';
   const pctDisp  = total > 0 ? (disponibles/total*100).toFixed(1) : '0.0';
@@ -473,16 +478,24 @@ function renderDashboard() {
   document.getElementById('kpiVacia').textContent = fmt(vacias);
   document.getElementById('kpiPct').textContent   = pctOcup + ' %';
   document.getElementById('kpiNook').textContent  = fmt(nook);
+  document.getElementById('kpiNookOcup').textContent = fmt(nookOcupadas);
   document.getElementById('kpiDisponibles').textContent = fmt(disponibles);
   document.getElementById('kpiDisponiblesPct').textContent = pctDisp + '% del total';
 
-  // ── BLOQUES TIPO → siempre con todos los datos ──
+  // Mostrar alerta si hay NOOK ocupadas
+  const alertBox = document.getElementById('kpiAlertBox');
+  if (nookOcupadas > 0) {
+    alertBox.style.display = 'block';
+    alertBox.style.animation = 'pulse 1s infinite';
+  } else {
+    alertBox.style.display = 'none';
+  }
+
   const picking = todos.filter(r => r.tipo === 'PICKING');
   const altura  = todos.filter(r => r.tipo === 'ALTURA');
   renderTipoBlock('picking', picking);
   renderTipoBlock('altura',  altura);
 
-  // ── GRAFICO → siempre con todos los datos ──
   const pickingPct = picking.length > 0 ? +(picking.filter(r=>r.ocup==='OCUPADA').length/picking.length*100).toFixed(2) : 0;
   const alturaPct  = altura.length  > 0 ? +(altura.filter(r=>r.ocup==='OCUPADA').length/altura.length*100).toFixed(2)   : 0;
 
@@ -510,18 +523,20 @@ function renderDashboard() {
     }
   });
 
-  // ── TABLA → solo esta se filtra ──
   const MAX = 500;
   const shown = filtrados.slice(0, MAX);
   document.getElementById('tablaCount').textContent = `${fmt(filtrados.length)} ubicaciones${filtrados.length > MAX ? ` (mostrando ${MAX})` : ''}`;
-  document.getElementById('tablaBody').innerHTML = shown.map(r => `
-    <tr>
+  document.getElementById('tablaBody').innerHTML = shown.map(r => {
+    const isNookOcup = r.obs === 'NOOK' && r.ocup === 'OCUPADA';
+    return `
+    <tr style="${isNookOcup ? 'background:#fef2f2;' : ''}">
       <td><strong>${r.loc}</strong></td>
       <td>${r.tipo}</td>
       <td>${r.sector}</td>
       <td><span class="badge ${r.ocup==='OCUPADA'?'b-ocup':'b-vacia'}">${r.ocup}</span></td>
-      <td><span class="badge ${r.obs==='OK'?'b-ok':'b-nook'}">${r.obs}</span></td>
-    </tr>`).join('');
+      <td><span class="badge ${r.obs==='OK'?'b-ok':'b-nook'}" ${isNookOcup ? 'style="background:#dc2626;color:#fff;border-color:#dc2626;"' : ''}>${r.obs}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 function fetchData() {
@@ -565,6 +580,26 @@ function fetchData() {
 
 fetchData();
 setInterval(fetchData, 5 * 60 * 1000);
+
+function exportExcel() {
+  const filtrados = getFiltered();
+  const datos = filtrados.map(r => ({
+    'Ubicación': r.loc,
+    'Tipo': r.tipo,
+    'Sector': r.sector,
+    'Ocupación': r.ocup,
+    'Estado': r.obs
+  }));
+  
+  const ws = XLSX.utils.json_to_sheet(datos);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ocupación');
+  const f = new Date();
+  const fecha = f.toLocaleDateString('es-AR').replace(/\//g,'-');
+  const hora = f.toTimeString().split(':')[0].replace(':','-');
+  const nombre = `Ocupacion_${fecha}_${hora}.xlsx`;
+  XLSX.writeFile(wb, nombre);
+}
 </script>
 </body>
 </html>
