@@ -763,6 +763,8 @@
 </div>
 
 <script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzusfmNvoG946Ulcf8Sl71PJU4tNev4cCDxJKIg_iOQNOHU_32M6nutUHI7uu9lGVgOcw/exec';
+
 const MARCAS_VALIDAS = new Set([
   'CF', 'CORVEN', 'MUNDIAL', 'ZANELLA', 'ARTICAT', 'CHERY', 'ARTIC CAT', 'KYMCO',
   'ARCTIC CAT', 'TRIUMPH', 'FOTON', 'BAJAJ', 'GENERICO', 'DFSK', 'FOTONREP',
@@ -988,6 +990,68 @@ function processData(data) {
 
   updateMarcasTable(marcasData);
   updateCharts(unidadesPorRotacion, tipoAPiso, tipoAAltura, srPiso, srAltura, marcasData);
+
+  // Sincronización automática con Google Sheets
+  if (typeof APPS_SCRIPT_URL !== 'undefined') {
+    const fileNameElement = document.getElementById('fileName');
+    
+    // Contar los SKUs y críticos para la sync (datosCompletos.bajar tiene el pctAltura)
+    let skuCriticos = 0, skuAlta = 0, skuMedia = 0;
+    datosCompletos.bajar.forEach(item => {
+      if(item.PorcAltura === 100) skuCriticos++;
+      else if(item.PorcAltura >= 70) skuAlta++;
+      else if(item.PorcAltura >= 50) skuMedia++;
+    });
+
+    const statsParaSheets = {
+      nombreArchivo:  fileNameElement ? fileNameElement.textContent.replace('Archivo: ', '') : 'CSV Manual',
+      totalRegistros: data.length,
+      
+      skuA:   skusPorRotacion['A']?.size || 0,
+      skuB:   skusPorRotacion['B']?.size || 0,
+      skuC:   skusPorRotacion['C']?.size || 0,
+      skuSR:  (skusPorRotacion['Sin Rotacion']?.size || 0) + (skusPorRotacion['Sin rotacion']?.size || 0),
+      skuTotal: totalSkus,
+      
+      pctSkuA:  totalSkus > 0 ? +((skusPorRotacion['A']?.size || 0) / totalSkus * 100).toFixed(1) : 0,
+      pctSkuB:  totalSkus > 0 ? +((skusPorRotacion['B']?.size || 0) / totalSkus * 100).toFixed(1) : 0,
+      pctSkuC:  totalSkus > 0 ? +((skusPorRotacion['C']?.size || 0) / totalSkus * 100).toFixed(1) : 0,
+      pctSkuSR: totalSkus > 0 ? +(((skusPorRotacion['Sin Rotacion']?.size || 0) + (skusPorRotacion['Sin rotacion']?.size || 0)) / totalSkus * 100).toFixed(1) : 0,
+
+      uniA:   unidadesPorRotacion['A'] || 0,
+      uniB:   unidadesPorRotacion['B'] || 0,
+      uniC:   unidadesPorRotacion['C'] || 0,
+      uniSR:  (unidadesPorRotacion['Sin Rotacion'] || 0) + (unidadesPorRotacion['Sin rotacion'] || 0),
+      uniTotal: totalUnidades,
+      
+      pctUniA:  totalUnidades > 0 ? +((unidadesPorRotacion['A'] || 0) / totalUnidades * 100).toFixed(1) : 0,
+      pctUniB:  totalUnidades > 0 ? +((unidadesPorRotacion['B'] || 0) / totalUnidades * 100).toFixed(1) : 0,
+      pctUniC:  totalUnidades > 0 ? +((unidadesPorRotacion['C'] || 0) / totalUnidades * 100).toFixed(1) : 0,
+      pctUniSR: totalUnidades > 0 ? +(((unidadesPorRotacion['Sin Rotacion'] || 0) + (unidadesPorRotacion['Sin rotacion'] || 0)) / totalUnidades * 100).toFixed(1) : 0,
+
+      tipoAPiso, tipoAAltura,
+      tipoAPisoSku: tipoAPisoSku.size,
+      tipoAAlturaSku: tipoAAlturaSku.size,
+      
+      skuCriticos, skuAlta, skuMedia,
+      
+      srPiso, srAltura,
+      srPisoSku: srPisoSku.size,
+      srAlturaSku: srAlturaSku.size
+    };
+
+    sincronizarConSheets(statsParaSheets);
+  }
+}
+
+async function sincronizarConSheets(stats) {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('PEGAR_URL')) return;
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(stats)
+  }).catch(e => console.error('Error_Sync:', e));
 }
 
 function applyFilters() {
