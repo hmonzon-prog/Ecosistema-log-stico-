@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Análisis de Bloqueados - Loginter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Barlow', sans-serif; background: #f0f2f5; color: #111827; }
+    
+    .header {
+      background: #fff;
+      padding: 20px 30px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .back-btn {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      transition: all 0.2s;
+    }
+    
+    .back-btn:hover {
+      border-color: #1a56db;
+      color: #1a56db;
+    }
+    
+    .header h1 { font-size: 20px; font-weight: 700; color: #1a56db; }
+    .header p { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    
+    .tabs {
+      display: flex;
+      gap: 0;
+      background: #fff;
+      border-bottom: 2px solid #e5e7eb;
+      padding: 0 30px;
+    }
+    
+    .tab {
+      padding: 15px 20px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-size: 14px;
+      font-weight: 600;
+      color: #6b7280;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    
+    .tab.active {
+      color: #1a56db;
+      border-bottom-color: #1a56db;
+    }
+    
+    .tab:hover { color: #1a56db; }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px;
+    }
+    
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .kpi-card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .kpi-label { font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-value { font-size: 28px; font-weight: 700; color: #1a56db; margin-top: 8px; }
+    .kpi-sub { font-size: 12px; color: #9ca3af; margin-top: 5px; }
+    
+    .content-section { display: none; }
+    .content-section.active { display: block; }
+    
+    .filters {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .filter-group label { font-size: 12px; font-weight: 600; color: #475569; }
+    .filter-group input,
+    .filter-group select {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: 'Barlow', sans-serif;
+    }
+    
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .chart-card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .chart-title { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 15px; }
+    
+    .table-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    
+    .table-header {
+      padding: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .table-header h3 { font-size: 14px; font-weight: 700; }
+    
+    .search-box {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+      width: 250px;
+    }
+    
+    .table-wrapper {
+      overflow-x: auto;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th {
+      background: #f9fafb;
+      padding: 12px 15px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+      border-bottom: 1px solid #e5e7eb;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 13px;
+    }
+    
+    tr:hover { background: #f9fafb; }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .badge-desvio { background: #fef3c7; color: #92400e; }
+    .badge-no-encontrado { background: #fee2e2; color: #991b1b; }
+    .badge-informado { background: #dcfce7; color: #166534; }
+    
+    .value-positive { color: #059669; font-weight: 600; }
+    
+    .info-box {
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      color: #1e40af;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+    
+    .val-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+    
+    .val-toggle:hover {
+      opacity: 1;
+    }
+    
+    @media (max-width: 768px) {
+      .container { padding: 15px; }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .charts-grid { grid-template-columns: 1fr; }
+      .filters { flex-direction: column; }
+      .filter-group { width: 100%; }
+      .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <button class="back-btn" onclick="window.location.href='index.html'">← Portal</button>
+    <div>
+      <h1>📦 Análisis de Bloqueados</h1>
+      <p>Gestión de mercadería bloqueada y desbloqueada</p>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('bloqueados')">Bloqueados</button>
+  <button class="tab" onclick="switchTab('desbloqueados')">Desbloqueados</button>
+  <button class="tab" onclick="switchTab('analisis')">Evolución Histórica</button>
+  <button class="tab" onclick="switchTab('desempeno')">Desempeño Usuarios</button>
+</div>
+
+<div class="container">
+
+  <!-- TAB: BLOQUEADOS -->
+  <div id="bloqueados" class="content-section active">
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Bloqueado</div>
+        <div class="kpi-value" id="kpi-total-bloq">-</div>
+        <div class="kpi-sub">SKUs bloqueados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cantidad Total</div>
+        <div class="kpi-value" id="kpi-qty-bloq">-</div>
+        <div class="kpi-sub">Unidades</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Motivo Principal</div>
+        <div class="kpi-value" id="kpi-motivo-bloq">-</div>
+        <div class="kpi-sub">Más frecuente</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Valor Total (Est.)</span>
+          <button onclick="toggleValorGlobally()" class="val-toggle" title="Ocultar/Mostrar">👁️</button>
+        </div>
+        <div class="kpi-value" id="kpi-valor-bloq" data-val="-">-</div>
+        <div class="kpi-sub">En riesgo</div>
+      </div>
+    </div>
+    
+    <div class="filters">
+      <div class="filter-group">
+        <label>Marca</label>
+        <select id="filter-marca-bloq" onchange="filterBloqueados()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Motivo</label>
+        <select id="filter-motivo-bloq" onchange="filterBloqueados()">
+          <option value="">Todos</option>
+          <option value="Desvío">Desvío</option>
+          <option value="Desvío Total">Desvío Total</option>
+          <option value="No Encontrado">No Encontrado</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Por Motivo</div>
+        <canvas id="chart-motivo-bloq"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Top 10 Marcas</div>
+        <canvas id="chart-marca-bloq"></canvas>
+      </div>
+    </div>
+    
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Detalle de Bloqueados</h3>
+        <input type="text" class="search-box" id="search-bloq" placeholder="Buscar por SKU..." onkeyup="filterBloqueados()">
+      </div>
+      <div class="table-wrapper">
+        <table id="table-bloqueados">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Descripción</th>
+              <th>Marca</th>
+              <th>Cantidad</th>
+              <th>Motivo</th>
+              <th>Precio Unitario</th>
+              <th>Total</th>
+              <th>Mes</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-bloqueados">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <!-- TAB: DESBLOQUEADOS -->
+  <div id="desbloqueados" class="content-section">
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Desbloqueado</div>
+        <div class="kpi-value" id="kpi-total-desbloq">-</div>
+        <div class="kpi-sub">SKUs resueltos</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cantidad Total</div>
+        <div class="kpi-value" id="kpi-qty-desbloq">-</div>
+        <div class="kpi-sub">Unidades</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Responsable Top</div>
+        <div class="kpi-value" id="kpi-responsable">-</div>
+        <div class="kpi-sub">Por unidades liberadas</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Valor Total (Est.)</span>
+          <button onclick="toggleValorGlobally()" class="val-toggle" title="Ocultar/Mostrar">👁️</button>
+        </div>
+        <div class="kpi-value" id="kpi-valor-desbloq" data-val="-">-</div>
+        <div class="kpi-sub">Liberado</div>
+      </div>
+    </div>
+    
+    <div class="filters">
+      <div class="filter-group">
+        <label>Marca</label>
+        <select id="filter-marca-desbloq" onchange="filterDesbloqueados()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Estado</label>
+        <select id="filter-estado-desbloq" onchange="filterDesbloqueados()">
+          <option value="">Todos</option>
+          <option value="INFORMADO">Informado</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Por Motivo</div>
+        <canvas id="chart-motivo-desbloq"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Top 10 Marcas</div>
+        <canvas id="chart-marca-desbloq"></canvas>
+      </div>
+    </div>
+    
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Detalle de Desbloqueados</h3>
+        <input type="text" class="search-box" id="search-desbloq" placeholder="Buscar por SKU..." onkeyup="filterDesbloqueados()">
+      </div>
+      <div class="table-wrapper">
+        <table id="table-desbloqueados">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Descripción</th>
+              <th>Marca</th>
+              <th>Cantidad</th>
+              <th>Motivo</th>
+              <th>Fecha Desbloqueo</th>
+              <th>Responsable</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-desbloqueados">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <!-- TAB: EVOLUCIÓN HISTÓRICA -->
+  <div id="analisis" class="content-section">
+    <div class="kpi-grid" id="kpi-hist-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="kpi-card">
+        <div class="kpi-label">Variedad de SKUs en Riesgo</div>
+        <div class="kpi-value" id="kpi-hist-sku">-</div>
+        <div class="kpi-sub" id="kpi-hist-sku-sub">Evolución (Mayo 2025 vs Hoy)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Volumen Total Bloqueado (QTY)</div>
+        <div class="kpi-value" id="kpi-hist-qty">-</div>
+        <div class="kpi-sub" id="kpi-hist-qty-sub">Variación Neta</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">SKUs Resueltos de Raíz</div>
+        <div class="kpi-value" id="kpi-hist-resolved" style="color:#10b981;">-</div>
+        <div class="kpi-sub">Ya no figuran como bloqueados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Nuevos Problemas</div>
+        <div class="kpi-value" id="kpi-hist-new" style="color:#ef4444;">-</div>
+        <div class="kpi-sub">SKUs bloqueados desde Mayo</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Desbloqueos Parciales</div>
+        <div class="kpi-value" id="kpi-hist-parcial" style="color:#34d399;">-</div>
+        <div class="kpi-sub" id="kpi-hist-parcial-sub">SKUs que bajaron su volumen</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Problemas Agravados</div>
+        <div class="kpi-value" id="kpi-hist-acum" style="color:#f87171;">-</div>
+        <div class="kpi-sub" id="kpi-hist-acum-sub">Mismo SKU, incrementó volumen</div>
+      </div>
+    </div>
+    
+    <!-- EXECUTIVE INSIGHTS PANEL -->
+    <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
+        <span style="font-size: 1.25rem;">🧠</span>
+        <h3 style="margin: 0; color: #f8fafc; font-size: 1.1rem; font-weight: 600;">Insights Analíticos Senior</h3>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+        <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; border-left: 4px solid #10b981;">
+          <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Tasa de Limpieza (Clearance)</div>
+          <div id="insight-clearance" style="font-size: 0.95rem; line-height: 1.5;">Calculando...</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; border-left: 4px solid #ef4444;">
+          <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Tensión de Novedades (Churn)</div>
+          <div id="insight-churn" style="font-size: 0.95rem; line-height: 1.5;">Calculando...</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+          <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Top 3 Focos de Acumulación</div>
+          <div id="insight-top-acum" style="font-size: 0.9rem; line-height: 1.6; color: #cbd5e1;">Calculando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHART: EVOLUCION TENDENCIA -->
+    <div class="chart-card" style="margin-bottom: 24px;">
+      <h3 style="border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 16px;">Comportamiento de Volumen (QTY)</h3>
+      <div class="chart-wrapper" style="height: 250px;">
+        <canvas id="chart-historico-trend"></canvas>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Detalle de Evolución por Código (SKU)</h3>
+        <input type="text" class="search-box" id="search-hist" placeholder="Buscar por SKU o Descripción..." onkeyup="filterHistTable()">
+      </div>
+      <div class="table-wrapper">
+        <table id="table-historico">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Descripción</th>
+              <th>Cant. (Mayo 2025)</th>
+              <th>Cant. (Hoy)</th>
+              <th>Evolución Neta</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-historico">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <!-- TAB: DESEMPEÑO -->
+  <div id="desempeno" class="content-section">
+    <div class="filters">
+      <div class="filter-group">
+        <label>Año de Desbloqueo</label>
+        <select id="filter-year-desempeno" onchange="filterDesempeno()">
+          <option value="">Todos los años</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Ranking de Resoluciones por Operador</h3>
+      </div>
+      <div class="table-wrapper">
+        <table id="table-desempeno">
+          <thead>
+            <tr>
+              <th>Posición</th>
+              <th>Colaborador</th>
+              <th>SKUs Resueltos</th>
+              <th>Unidades Liberadas (QTY)</th>
+              <th>Valor Estimado Recuperado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-desempeno">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let dataBloqueados = [];
+  let dataDesbloqueados = [];
+  let dataHistorico = [];
+  let historicoComparado = [];
+  
+  let chartMotivoBloq, chartMarcaBloq, chartMotivoDesbloq, chartMarcaDesbloq, chartHistTrend;
+  
+  let valorVisible = true;
+  
+  function toggleValorGlobally() {
+    valorVisible = !valorVisible;
+    updateKPIsVisibility();
+  }
+
+  function updateKPIsVisibility() {
+    const ids = ['kpi-valor-bloq', 'kpi-valor-desbloq'];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        if (valorVisible) {
+          el.textContent = el.getAttribute('data-val') || '-';
+        } else {
+          el.textContent = '****';
+        }
+      }
+    });
+    
+    document.querySelectorAll('.val-maskable').forEach(el => {
+      if (valorVisible) {
+        el.textContent = el.getAttribute('data-val') || '-';
+      } else {
+        el.textContent = '****';
+      }
+    });
+  }
+
+  
+  // Iniciar
+  async function init() {
+    await fetchData();
+    updateKPIs();
+    renderCharts();
+    populateFilters();
+    populateDesempenoFilters();
+    renderTableBloqueados(dataBloqueados);
+    renderTableDesbloqueados(dataDesbloqueados);
+    renderHistorico();
+    filterDesempeno();
+  }
+  
+  function populateDesempenoFilters() {
+    const years = new Set();
+    dataDesbloqueados.forEach(d => {
+      if(d.fecha) {
+        const m = d.fecha.match(/\d{4}/);
+        if(m) years.add(m[0]);
+      }
+    });
+    
+    const select = document.getElementById('filter-year-desempeno');
+    Array.from(years).sort().reverse().forEach(year => {
+      const option = document.createElement('option');
+      option.value = year;
+      option.textContent = year;
+      select.appendChild(option);
+    });
+  }
+  
+  function filterDesempeno() {
+    const year = document.getElementById('filter-year-desempeno').value;
+    const filtered = dataDesbloqueados.filter(item => {
+      if(!year) return true;
+      if(!item.fecha) return false;
+      return item.fecha.includes(year);
+    });
+    renderTableDesempeno(filtered);
+  }
+  
+  function cleanNumber(str) {
+    if (!str) return 0;
+    // Remove all characters except digits, commas and minus signs
+    const cleaned = str.replace(/[^\d,\-]/g, '').replace(',', '.');
+    return parseFloat(cleaned) || 0;
+  }
+  
+  function fetchGViz(spreadsheetId, gid, query = 'select *', callbackName) {
+    return new Promise((resolve, reject) => {
+      window[callbackName] = function(resp) {
+        if (!resp || !resp.table || !resp.table.rows) {
+          reject(new Error('Formato de datos incorrecto o vacío'));
+          return;
+        }
+        
+        const rows = resp.table.rows.map(row => {
+          const c = row.c || [];
+          // helper to get raw value or formatted string
+          const getVal = (i) => c[i] && c[i].v !== null ? String(c[i].v).trim() : '';
+          return getVal;
+        });
+        
+        resolve(rows);
+      };
+      
+      const script = document.createElement('script');
+      script.src = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tq=${encodeURIComponent(query)}&gid=${gid}&tqx=out:json;responseHandler:${callbackName}&headers=1`;
+      script.onerror = () => reject(new Error('Fallo al cargar script GViz'));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function fetchData() {
+    try {
+      const sheetId = '1gy28H7ozTdNGkP-IsmkYVORzWLz0esG9mU4A72M23J0';
+      
+      // BLOQUEADOS -> gid=0
+      let rowsBloq = [];
+      try {
+        rowsBloq = await fetchGViz(sheetId, '0', 'select *', '__gvizBloqCallback');
+      } catch (e) {
+        console.error("Error cargando Bloqueados:", e);
+      }
+      
+      dataBloqueados = rowsBloq.filter(g => g(0)).map(g => ({
+        sku: g(0),
+        desc: g(1),
+        qty: cleanNumber(g(2)),
+        motivo: g(3),
+        fecha: g(4),
+        marca: g(8),
+        unitario: cleanNumber(g(9)),
+        total: cleanNumber(g(10)),
+        mes: g(11) || 'SIN FECHA'
+      }));
+      
+      // DESBLOQUEADOS -> gid=1965881417
+      let rowsDesbloq = [];
+      try {
+        rowsDesbloq = await fetchGViz(sheetId, '1965881417', 'select *', '__gvizDesbloqCallback');
+      } catch (e) {
+        console.error("Error cargando Desbloqueados:", e);
+      }
+      
+      dataDesbloqueados = rowsDesbloq.filter(g => g(0)).map(g => ({
+        sku: g(0),
+        desc: g(1),
+        qty: cleanNumber(g(2)),
+        motivo: g(3),
+        fecha: g(4),
+        estado: g(5),
+        unitario: cleanNumber(g(6)),
+        total: cleanNumber(g(7)),
+        marca: g(8),
+        responsable: g(9) || 'N/A'
+      }));
+      // HISTORICO -> MAYO 2025 -> gid=2093106929
+      let rowsHist = [];
+      try {
+        rowsHist = await fetchGViz(sheetId, '2093106929', 'select *', '__gvizHistCallback');
+      } catch (e) {
+        console.error("Error cargando Historico:", e);
+      }
+      dataHistorico = rowsHist.filter(g => g(0)).map(g => ({
+        sku: g(0),
+        desc: g(1),
+        qty: cleanNumber(g(2)),
+        motivo: g(3),
+        fecha: g(4)
+      }));
+
+    } catch (e) {
+      console.error('Error general fetching data', e);
+    }
+  }
+
+  function updateKPIs() {
+    const totalBloq = dataBloqueados.length;
+    const valorBloq = dataBloqueados.reduce((sum, item) => sum + item.total, 0);
+    const qtyBloq = dataBloqueados.reduce((sum, item) => sum + item.qty, 0);
+    const motivoPrincipal = getMostFrequent(dataBloqueados.map(d => d.motivo));
+    
+    document.getElementById('kpi-total-bloq').textContent = totalBloq;
+    document.getElementById('kpi-valor-bloq').setAttribute('data-val', formatCurrency(valorBloq));
+    document.getElementById('kpi-qty-bloq').textContent = qtyBloq.toLocaleString();
+    document.getElementById('kpi-motivo-bloq').textContent = motivoPrincipal;
+    
+    const totalDesbloq = dataDesbloqueados.length;
+    const valorDesbloq = dataDesbloqueados.reduce((sum, item) => sum + item.total, 0);
+    const qtyDesbloq = dataDesbloqueados.reduce((sum, item) => sum + item.qty, 0);
+    const responsableSummary = {};
+    dataDesbloqueados.forEach(d => {
+      let r = d.responsable ? d.responsable.toLowerCase().trim() : '';
+      if (!r || r === '-' || r === 'n/a') return;
+      
+      // Normalización de nombres
+      if (r.includes('amadrid') || r.includes('agustín')) r = 'A. Madrid';
+      else if (r.includes('cmaldonado') || r.includes('cristian')) r = 'C. Maldonado';
+      else if (r.includes('nayala') || r.includes('nicolas')) r = 'N. Ayala';
+      else if (r.includes('fquinteros') || r.includes('florencia')) r = 'F. Quinteros';
+      else if (r.includes('jferreyra') || r.includes('juan cruz')) r = 'J. Ferreyra';
+      else if (r.includes('hmonzon') || r.includes('hernan')) r = 'H. Monzón';
+      else if (r.includes('lulopez') || r.includes('lucas')) r = 'L. López';
+      else r = r.replace(/\b\w/g, c => c.toUpperCase());
+      
+      responsableSummary[r] = (responsableSummary[r] || 0) + d.qty;
+    });
+    
+    let responsableTop = '—';
+    if (Object.keys(responsableSummary).length > 0) {
+      responsableTop = Object.keys(responsableSummary).reduce((a, b) => responsableSummary[a] > responsableSummary[b] ? a : b);
+    }
+    
+    document.getElementById('kpi-total-desbloq').textContent = totalDesbloq;
+    document.getElementById('kpi-valor-desbloq').setAttribute('data-val', formatCurrency(valorDesbloq));
+    document.getElementById('kpi-qty-desbloq').textContent = qtyDesbloq.toLocaleString();
+    document.getElementById('kpi-responsable').textContent = responsableTop;
+    // El resto de los dominios fueron reemplazados por el nuevo tab Historico
+    updateKPIsVisibility();
+  }
+  
+  function renderCharts() {
+    renderMotivoBloq();
+    renderMarcaBloq();
+    renderMotivoDesbloq();
+    renderMarcaDesbloq();
+  }
+  
+  function renderMotivoBloq() {
+    const motivoCount = {};
+    dataBloqueados.forEach(item => {
+      motivoCount[item.motivo] = (motivoCount[item.motivo] || 0) + 1;
+    });
+    
+    const ctx = document.getElementById('chart-motivo-bloq').getContext('2d');
+    if (chartMotivoBloq) chartMotivoBloq.destroy();
+    
+    chartMotivoBloq = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(motivoCount),
+        datasets: [{
+          data: Object.values(motivoCount),
+          backgroundColor: ['#fbbf24', '#ef4444', '#3b82f6'],
+          borderColor: '#fff',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+  
+  function renderMarcaBloq() {
+    const marcaCount = {};
+    dataBloqueados.forEach(item => {
+      marcaCount[item.marca] = (marcaCount[item.marca] || 0) + item.total;
+    });
+    
+    const sorted = Object.entries(marcaCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+    
+    const ctx = document.getElementById('chart-marca-bloq').getContext('2d');
+    if (chartMarcaBloq) chartMarcaBloq.destroy();
+    
+    chartMarcaBloq = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: sorted.map(item => item[0]),
+        datasets: [{
+          label: 'Valor Total',
+          data: sorted.map(item => item[1]),
+          backgroundColor: '#1a56db',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true } }
+      }
+    });
+  }
+  
+  function renderMotivoDesbloq() {
+    const motivoCount = {};
+    dataDesbloqueados.forEach(item => {
+      motivoCount[item.motivo] = (motivoCount[item.motivo] || 0) + 1;
+    });
+    
+    const ctx = document.getElementById('chart-motivo-desbloq').getContext('2d');
+    if (chartMotivoDesbloq) chartMotivoDesbloq.destroy();
+    
+    chartMotivoDesbloq = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(motivoCount),
+        datasets: [{
+          data: Object.values(motivoCount),
+          backgroundColor: ['#fbbf24', '#ef4444', '#3b82f6'],
+          borderColor: '#fff',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+  
+  function renderMarcaDesbloq() {
+    const marcaCount = {};
+    dataDesbloqueados.forEach(item => {
+      marcaCount[item.marca] = (marcaCount[item.marca] || 0) + item.total;
+    });
+    
+    const sorted = Object.entries(marcaCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+    
+    const ctx = document.getElementById('chart-marca-desbloq').getContext('2d');
+    if (chartMarcaDesbloq) chartMarcaDesbloq.destroy();
+    
+    chartMarcaDesbloq = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: sorted.map(item => item[0]),
+        datasets: [{
+          label: 'Valor Total',
+          data: sorted.map(item => item[1]),
+          backgroundColor: '#059669',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true } }
+      }
+    });
+  }
+  
+  function populateFilters() {
+    const marcasBloq = [...new Set(dataBloqueados.map(d => d.marca).filter(m => m))];
+    const marcasDesbloq = [...new Set(dataDesbloqueados.map(d => d.marca).filter(m => m))];
+    
+    const selectBloq = document.getElementById('filter-marca-bloq');
+    const selectDesbloq = document.getElementById('filter-marca-desbloq');
+    
+    marcasBloq.forEach(marca => {
+      const option = document.createElement('option');
+      option.value = marca;
+      option.textContent = marca;
+      selectBloq.appendChild(option);
+    });
+    
+    marcasDesbloq.forEach(marca => {
+      const option = document.createElement('option');
+      option.value = marca;
+      option.textContent = marca;
+      selectDesbloq.appendChild(option);
+    });
+  }
+  
+  function filterBloqueados() {
+    const marca = document.getElementById('filter-marca-bloq').value;
+    const motivo = document.getElementById('filter-motivo-bloq').value;
+    const search = document.getElementById('search-bloq').value.toLowerCase();
+    
+    const filtered = dataBloqueados.filter(item => {
+      return (!marca || item.marca === marca) &&
+             (!motivo || item.motivo === motivo) &&
+             (!search || item.sku.toLowerCase().includes(search));
+    });
+    
+    renderTableBloqueados(filtered);
+  }
+  
+  function filterDesbloqueados() {
+    const marca = document.getElementById('filter-marca-desbloq').value;
+    const estado = document.getElementById('filter-estado-desbloq').value;
+    const search = document.getElementById('search-desbloq').value.toLowerCase();
+    
+    const filtered = dataDesbloqueados.filter(item => {
+      return (!marca || item.marca === marca) &&
+             (!estado || item.estado === estado) &&
+             (!search || item.sku.toLowerCase().includes(search));
+    });
+    
+    renderTableDesbloqueados(filtered);
+  }
+  
+  function renderTableBloqueados(data) {
+    const tbody = document.getElementById('tbody-bloqueados');
+    tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#6b7280;">Sin resultados</td></tr>';
+      return;
+    }
+    
+    data.forEach(item => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><strong>${item.sku}</strong></td>
+        <td>${item.desc}</td>
+        <td>${item.marca}</td>
+        <td>${item.qty.toLocaleString()}</td>
+        <td><span class="badge badge-${item.motivo.toLowerCase().replace(' ', '-')}">${item.motivo}</span></td>
+        <td>${formatCurrency(item.unitario)}</td>
+        <td><strong>${formatCurrency(item.total)}</strong></td>
+        <td>${item.mes}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+  
+  function renderTableDesbloqueados(data) {
+    const tbody = document.getElementById('tbody-desbloqueados');
+    tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#6b7280;">Sin resultados</td></tr>';
+      return;
+    }
+    
+    data.forEach(item => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><strong>${item.sku}</strong></td>
+        <td>${item.desc}</td>
+        <td>${item.marca}</td>
+        <td>${item.qty.toLocaleString()}</td>
+        <td><span class="badge badge-${item.motivo.toLowerCase().replace(' ', '-')}">${item.motivo}</span></td>
+        <td>${item.fecha}</td>
+        <td>${item.responsable}</td>
+        <td><strong class="value-positive val-maskable" data-val="${formatCurrency(item.total)}">${valorVisible ? formatCurrency(item.total) : '****'}</strong></td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+  
+  function renderTableDesempeno(data) {
+    const summary = {};
+    data.forEach(d => {
+      let r = d.responsable ? d.responsable.toLowerCase().trim() : '';
+      if (!r || r === '-' || r === 'n/a') r = 'sin asignar';
+      
+      // Normalización de nombres
+      if (r.includes('amadrid') || r.includes('agustín')) r = 'A. Madrid';
+      else if (r.includes('cmaldonado') || r.includes('cristian')) r = 'C. Maldonado';
+      else if (r.includes('nayala') || r.includes('nicolas')) r = 'N. Ayala';
+      else if (r.includes('fquinteros') || r.includes('florencia')) r = 'F. Quinteros';
+      else if (r.includes('jferreyra') || r.includes('juan cruz')) r = 'J. Ferreyra';
+      else if (r.includes('hmonzon') || r.includes('hernan')) r = 'H. Monzón';
+      else if (r.includes('lulopez') || r.includes('lucas')) r = 'L. López';
+      else if (r === 'sin asignar') r = 'Sin Asignar';
+      else r = r.replace(/\b\w/g, c => c.toUpperCase());
+      
+      if (!summary[r]) {
+        summary[r] = { skus: 0, qty: 0, total: 0 };
+      }
+      summary[r].skus += 1;
+      summary[r].qty += d.qty;
+      summary[r].total += d.total;
+    });
+
+    const arr = Object.entries(summary).map(([name, data]) => ({ name, ...data }));
+    arr.sort((a, b) => b.qty - a.qty); // Ordenar por unidades liberadas por defecto
+
+    const tbody = document.getElementById('tbody-desempeno');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    
+    if (arr.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#6b7280;">Sin resultados</td></tr>';
+      return;
+    }
+    
+    arr.forEach((item, index) => {
+      const row = document.createElement('tr');
+      // 1er lugar, icono estrella
+      const rank = index === 0 ? '🥇 1' : index === 1 ? '🥈 2' : index === 2 ? '🥉 3' : (index + 1);
+      
+      row.innerHTML = `
+        <td><strong>${rank}</strong></td>
+        <td style="font-weight:600;">${item.name}</td>
+        <td>${item.skus}</td>
+        <td style="font-weight:700; color:#059669;">${item.qty.toLocaleString()}</td>
+        <td><strong style="color:#6b7280" class="val-maskable" data-val="${formatCurrency(item.total)}">${valorVisible ? formatCurrency(item.total) : '****'}</strong></td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+  
+  function renderHistorico() {
+    const histSkus = dataHistorico.length;
+    const histQty = dataHistorico.reduce((s, i) => s + i.qty, 0);
+    
+    const currSkus = dataBloqueados.length;
+    const currQty = dataBloqueados.reduce((s, i) => s + i.qty, 0);
+    
+    const diffSkus = currSkus - histSkus;
+    const diffQty = currQty - histQty;
+    
+    document.getElementById('kpi-hist-sku').textContent = `${histSkus} ➔ ${currSkus}`;
+    if(diffSkus > 0) document.getElementById('kpi-hist-sku-sub').innerHTML = `<span style="color:#ef4444;font-weight:700;">+${diffSkus} SKUs</span> (empeoró)`;
+    else if(diffSkus < 0) document.getElementById('kpi-hist-sku-sub').innerHTML = `<span style="color:#10b981;font-weight:700;">${diffSkus} SKUs</span> (mejoró)`;
+    else document.getElementById('kpi-hist-sku-sub').innerHTML = `<span style="color:#6b7280;font-weight:700;">0 Variación</span>`;
+    
+    document.getElementById('kpi-hist-qty').textContent = `${histQty.toLocaleString()} ➔ ${currQty.toLocaleString()}`;
+    if(diffQty > 0) document.getElementById('kpi-hist-qty-sub').innerHTML = `<span style="color:#ef4444;font-weight:700;">+${diffQty.toLocaleString()} unds</span> (empeoró)`;
+    else if(diffQty < 0) document.getElementById('kpi-hist-qty-sub').innerHTML = `<span style="color:#10b981;font-weight:700;">${diffQty.toLocaleString()} unds</span> (mejoró)`;
+    else document.getElementById('kpi-hist-qty-sub').innerHTML = `<span style="color:#6b7280;font-weight:700;">0 Variación</span>`;
+
+    const mapHist = new Map();
+    dataHistorico.forEach(d => mapHist.set(d.sku, d));
+    
+    const mapCurr = new Map();
+    dataBloqueados.forEach(d => mapCurr.set(d.sku, d));
+    
+    let resueltosCount = 0;
+    let nuevosCount = 0;
+    let parcialesCount = 0;
+    let parcialesQty = 0;
+    let acumulandoCount = 0;
+    let acumulandoQty = 0;
+    const itemsTable = [];
+    
+    mapHist.forEach((hItem, sku) => {
+      const cItem = mapCurr.get(sku);
+      if (!cItem) {
+        resueltosCount++;
+        itemsTable.push({ sku, desc: hItem.desc, qHist: hItem.qty, qCurr: 0, diff: -hItem.qty, status: 'RESUELTO' });
+      } else {
+        const diff = cItem.qty - hItem.qty;
+        if (diff !== 0) {
+          if (diff < 0) {
+            parcialesCount++;
+            parcialesQty += Math.abs(diff);
+          } else {
+            acumulandoCount++;
+            acumulandoQty += diff;
+          }
+          itemsTable.push({ sku, desc: hItem.desc, qHist: hItem.qty, qCurr: cItem.qty, diff, status: diff < 0 ? 'DESCONTANDO' : 'AGREGANDO' });
+        }
+      }
+    });
+    
+    mapCurr.forEach((cItem, sku) => {
+      if (!mapHist.has(sku)) {
+        nuevosCount++;
+        itemsTable.push({ sku, desc: cItem.desc, qHist: 0, qCurr: cItem.qty, diff: cItem.qty, status: 'NUEVO' });
+      }
+    });
+
+    document.getElementById('kpi-hist-resolved').textContent = resueltosCount;
+    document.getElementById('kpi-hist-new').textContent = nuevosCount;
+    
+    document.getElementById('kpi-hist-parcial').textContent = parcialesCount;
+    document.getElementById('kpi-hist-parcial-sub').innerHTML = `Se liberaron <strong style="color:#34d399;">${parcialesQty.toLocaleString()} unds</strong>`;
+    
+    document.getElementById('kpi-hist-acum').textContent = acumulandoCount;
+    document.getElementById('kpi-hist-acum-sub').innerHTML = `Se sumaron <strong style="color:#f87171;">${acumulandoQty.toLocaleString()} unds</strong>`;
+    
+    /* ANALYST INSIGHTS CALCULATIONS */
+    // 1. Tasa de Limpieza (Clearance)
+    const clearancePerc = histSkus > 0 ? ((resueltosCount / histSkus) * 100).toFixed(1) : 0;
+    document.getElementById('insight-clearance').innerHTML = `Se logró limpiar el <strong style="color:#10b981; font-size:1.1rem;">${clearancePerc}%</strong> de los SKUs que estaban bloqueados en Mayo. Representa una excelente depuración de la "basura" histórica.`;
+    
+    // 2. Churn de Novedades
+    const churnPerc = currSkus > 0 ? ((nuevosCount / currSkus) * 100).toFixed(1) : 0;
+    document.getElementById('insight-churn').innerHTML = `El <strong style="color:#ef4444; font-size:1.1rem;">${churnPerc}%</strong> de los SKUs bloqueados HOY son netamente NUEVOS (no existían en Mayo). Esto indica que la operación frena mercadería entrante más rápido de lo que depura.`;
+    
+    // 3. Top 3 Focos de Acumulación (SKUs que más QTY sumaron)
+    const acumuladores = itemsTable.filter(i => i.diff > 0 && i.status !== 'NUEVO').sort((a,b) => b.diff - a.diff).slice(0, 3);
+    if(acumuladores.length > 0) {
+      document.getElementById('insight-top-acum').innerHTML = acumuladores.map(i => `&bull; <strong>${i.sku}</strong>: sumó <span style="color:#f87171;">+${i.diff.toLocaleString()} unds</span>`).join('<br>');
+    } else {
+      document.getElementById('insight-top-acum').innerHTML = `No hay SKUs históricos que hayan seguido acumulando masivamente.`;
+    }
+    
+    updateChartHistorico(histQty, currQty, histSkus, currSkus);
+
+    itemsTable.sort((a,b) => a.diff - b.diff);
+    historicoComparado = itemsTable;
+    drawHistTable(historicoComparado);
+  }
+
+  function drawHistTable(data) {
+    const tbody = document.getElementById('tbody-historico');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#6b7280;">Sin variación detectada entre Mayo y Hoy</td></tr>';
+      return;
+    }
+    
+    data.forEach(item => {
+      const row = document.createElement('tr');
+      let diffStr = item.diff > 0 ? `+${item.diff.toLocaleString()}` : `${item.diff.toLocaleString()}`;
+      let diffColor = item.diff > 0 ? '#ef4444' : '#10b981';
+      
+      let badge = '';
+      if(item.status === 'RESUELTO') badge = `<span class="badge" style="background:#10b981;color:white;">Resuelto 100%</span>`;
+      else if(item.status === 'NUEVO') badge = `<span class="badge" style="background:#ef4444;color:white;">Bloqueo Nuevo</span>`;
+      else if(item.diff < 0) badge = `<span class="badge" style="background:#34d399;color:white;border:1px solid #10b981;">Descontando</span>`;
+      else badge = `<span class="badge" style="background:#f87171;color:white;border:1px solid #ef4444;">Acumulando</span>`;
+      
+      row.innerHTML = `
+        <td><strong>${item.sku}</strong></td>
+        <td>${item.desc}</td>
+        <td>${item.qHist.toLocaleString()}</td>
+        <td>${item.qCurr.toLocaleString()}</td>
+        <td>
+           <strong style="color:${diffColor}; margin-right:10px;">${diffStr}</strong>
+           ${badge}
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+  
+  function filterHistTable() {
+    const q = document.getElementById('search-hist').value.toLowerCase();
+    const filtered = historicoComparado.filter(item => 
+      item.sku.toLowerCase().includes(q) || 
+      item.desc.toLowerCase().includes(q)
+    );
+    drawHistTable(filtered);
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    
+    document.getElementById(tab).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  function updateChartHistorico(histQty, currQty, histSkus, currSkus) {
+    const ctx = document.getElementById('chart-historico-trend').getContext('2d');
+    if (chartHistTrend) chartHistTrend.destroy();
+    
+    const isQtyImprovement = currQty <= histQty;
+    const isSkusImprovement = currSkus <= histSkus;
+    
+    const qtyColorLine = isQtyImprovement ? '#10b981' : '#ef4444';
+    const skuColorLine = isSkusImprovement ? '#3b82f6' : '#f59e0b';
+    
+    chartHistTrend = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Mayo 2025 (Histórico)', 'Hoy (Actual)'],
+        datasets: [
+          {
+            type: 'line',
+            label: 'Trayectoria QTY',
+            data: [histQty, currQty],
+            borderColor: qtyColorLine,
+            borderWidth: 4,
+            tension: 0.1,
+            yAxisID: 'y',
+            pointBackgroundColor: qtyColorLine,
+            pointRadius: 6,
+            pointHoverRadius: 8
+          },
+          {
+            type: 'line',
+            label: 'Trayectoria SKUs',
+            data: [histSkus, currSkus],
+            borderColor: skuColorLine,
+            borderWidth: 4,
+            tension: 0.1,
+            borderDash: [5, 5],
+            yAxisID: 'y1',
+            pointBackgroundColor: skuColorLine,
+            pointRadius: 6,
+            pointHoverRadius: 8
+          },
+          {
+            type: 'bar',
+            label: 'Volumen QTY',
+            data: [histQty, currQty],
+            backgroundColor: ['#94a3b8', qtyColorLine],
+            borderRadius: 6,
+            barPercentage: 0.4,
+            yAxisID: 'y'
+          },
+          {
+            type: 'bar',
+            label: 'Variedad SKUs',
+            data: [histSkus, currSkus],
+            backgroundColor: ['#cbd5e1', skuColorLine],
+            borderRadius: 6,
+            barPercentage: 0.4,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { 
+            display: true,
+            position: 'top',
+            labels: { usePointStyle: true, boxWidth: 10 }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false
+          }
+        },
+        scales: {
+          y: { 
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: { display: true, text: 'Unidades Totales (QTY)', color: '#64748b' },
+            ticks: { callback: value => value.toLocaleString() }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: { display: true, text: 'Cantidad de Variedades (SKUs)', color: '#64748b' },
+            ticks: { callback: value => value.toLocaleString() },
+            grid: { drawOnChartArea: false }
+          }
+        }
+      }
+    });
+  }
+  
+  function formatCurrency(value) {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0
+    }).format(value);
+  }
+  
+  function getMostFrequent(arr) {
+    if (arr.length === 0) return '—';
+    const counts = {};
+    arr.forEach(item => counts[item] = (counts[item] || 0) + 1);
+    return Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
+  }
+  
+  init();
+</script>
+
+</body>
+</html>
