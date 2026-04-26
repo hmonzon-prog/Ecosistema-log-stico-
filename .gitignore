@@ -1,0 +1,11 @@
+# Evitar subir backups pesados y sensibles
+*.zip
+backup_original/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Configuración local
+.env
+config.local.js

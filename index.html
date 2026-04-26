@@ -109,6 +109,7 @@
   .auth-box .divider-text{text-align:center;color:#999;margin:15px 0;font-size:12px;}
   .auth-box .admin-section{border-top:1px solid #e2e6ea;padding-top:15px;}
 </style>
+  <script src="js/security.js"></script>
 </head>
 <body>
 
@@ -121,6 +122,7 @@
     </div>
   </div>
   <div class="fecha-badge" id="fechaBadge"></div>
+  <button id="logoutBtn" style="display:none;background:var(--red);color:#fff;border:none;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;margin-left:10px;" onclick="sessionStorage.clear();location.reload();">🚪 Cerrar Sesión</button>
 </div>
 
 <div class="hero">
@@ -298,87 +300,65 @@
   Loginter · Portal de Gestión Operación CMA · <span id="footerFecha"></span>
 </div>
 
-<div id="authModal" class="auth-modal" style="display:none;">
+<div id="authModal" class="auth-modal" style="display:flex;">
   <div class="auth-box">
-    <h2>🔐 Acceso al Ecosistema</h2>
-    <p style="margin-bottom:20px;color:#666;">Selecciona tu tipo de acceso</p>
+    <div style="font-size:40px;margin-bottom:10px;">🔐</div>
+    <h2>Acceso Restringido</h2>
+    <p style="margin-bottom:25px;color:#6b7280;font-size:14px;">Ingresa tu contraseña para acceder al portal de gestión operativa.</p>
     
-    <button class="guest-btn" onclick="accessAsGuest()">👤 Continuar como Invitado</button>
-    
-    <div class="divider-text">O ingresa tu contraseña de administrador</div>
-    
-    <div class="admin-section">
-      <input type="password" id="adminPass" placeholder="Contraseña" onkeypress="if(event.key==='Enter') checkAuth()">
-      <button onclick="checkAuth()">🔓 Acceso Administrativo</button>
+    <div class="admin-section" style="border:none;padding:0;">
+      <input type="password" id="accessPass" placeholder="Contraseña de acceso" 
+             style="text-align:center;font-size:16px;letter-spacing:2px;width:100%;padding:12px;margin-bottom:15px;border:1px solid #e2e6ea;border-radius:6px;"
+             onkeypress="if(event.key==='Enter') checkAuth()">
+      <button onclick="checkAuth()" style="background:#1a56db;color:#fff;border:none;padding:14px;border-radius:6px;cursor:pointer;font-weight:600;width:100%;font-size:15px;">ENTRAR AL SISTEMA</button>
     </div>
+    
+    <p style="margin-top:20px;font-size:11px;color:#9ca3af;">Si no tienes una contraseña, contacta al administrador de inventario.</p>
   </div>
 </div>
 
 <script>
-(function() {
-  const ADMIN_PASSWORD = 'Mundowarcraft1';
-  const isAdmin = sessionStorage.getItem('admin') === 'true';
-  const isGuest = sessionStorage.getItem('guest') === 'true';
+(async function() {
+  // Verificamos si ya hay una sesión activa
+  const { isAuthenticated, isGuest } = Security.checkSession();
   
-  if (!isAdmin && !isGuest) {
-    document.getElementById('authModal').style.display = 'flex';
-    enableProtections();
-  } else if (isAdmin) {
-    disableProtections();
+  const modal = document.getElementById('authModal');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  if (!isAuthenticated) {
+    // Si no está autenticado, mostrar el candado
+    modal.style.display = 'flex';
+    if(logoutBtn) logoutBtn.style.display = 'none';
+  } else {
+    // Si está autenticado, ocultar modal y mostrar botón de salir
+    modal.style.display = 'none';
+    if(logoutBtn) logoutBtn.style.display = 'block';
+    
+    // Si es invitado, aplicar el escudo anti-curiosos
+    if (isGuest) {
+      Security.applyProtections();
+    }
   }
-  
-  window.accessAsGuest = function() {
-    sessionStorage.setItem('guest', 'true');
-    document.getElementById('authModal').style.display = 'none';
-    enableProtections();
-  };
-  
-  window.checkAuth = function() {
-    const pass = document.getElementById('adminPass').value;
-    if (pass === ADMIN_PASSWORD) {
-      sessionStorage.setItem('admin', 'true');
-      sessionStorage.removeItem('guest');
-      document.getElementById('authModal').style.display = 'none';
-      disableProtections();
+
+  // Función global para validar el acceso
+  window.checkAuth = async function() {
+    const pass = document.getElementById('accessPass').value;
+    const role = await Security.validate(pass);
+    
+    if (role) {
+      sessionStorage.setItem('user_role', role);
+      location.reload(); // Recargamos para aplicar los cambios de rol
     } else {
-      alert('Contraseña incorrecta');
+      alert('🚫 Contraseña incorrecta. Acceso denegado.');
     }
   };
-  
-  function enableProtections() {
-    // Desactivar F12 y DevTools
-    document.onkeydown = function(e) {
-      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || 
-          (e.ctrlKey && e.shiftKey && e.key === 'C') || 
-          (e.ctrlKey && e.shiftKey && e.key === 'J') ||
-          (e.ctrlKey && e.key === 'S')) {
-        e.preventDefault();
-        return false;
-      }
-    };
-    
-    // Desactivar click derecho
-    document.addEventListener('contextmenu', function(e) {
-      e.preventDefault();
-      return false;
-    });
-    
-    // Desactivar Ctrl+C, Ctrl+X
-    document.addEventListener('copy', function(e) { e.preventDefault(); });
-    document.addEventListener('cut', function(e) { e.preventDefault(); });
-  }
-  
-  function disableProtections() {
-    document.onkeydown = null;
-    document.removeEventListener('contextmenu', function() {});
-  }
-  
+
   // Fecha
   const ahora = new Date();
   const opts = {weekday:'long',year:'numeric',month:'long',day:'numeric'};
   const fStr = ahora.toLocaleDateString('es-AR', opts);
-  document.getElementById('fechaBadge').textContent = fStr;
-  document.getElementById('footerFecha').textContent = fStr;
+  if(document.getElementById('fechaBadge')) document.getElementById('fechaBadge').textContent = fStr;
+  if(document.getElementById('footerFecha')) document.getElementById('footerFecha').textContent = fStr;
 })();
 </script>
 </body>
