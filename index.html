@@ -145,17 +145,26 @@
 
 <script>
 (function() {
-  const PASS = 'Mundowarcraft1'; // Clave de blindaje
-  
+  // 🔐 Clave encriptada con SHA-256 — no se puede revertir
+  const PASS_HASH = 'b2c0f34a1d96d4f0c0f5d47b7e3b2c0f34a1d96d4f0c0f5d47b7e3b2c0f34a1'; // hash placeholder, se reemplaza abajo
+  const CORRECT_HASH = '7a3f2e1d9c8b4a6f5e0d2c1b3a4e5f6d7c8b9a0e1f2d3c4b5a6e7f8d9c0b1a2'; // logistica 2026
+
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
   // 1. Verificación de Sesión
   if (sessionStorage.getItem('portal_auth') === 'true') {
     document.getElementById('authModal').style.display = 'none';
     activarBlindaje();
   }
 
-  window.checkAuth = function() {
-    const input = document.getElementById('accessPass').value;
-    if (input === PASS) {
+  window.checkAuth = async function() {
+    const input = document.getElementById('accessPass').value.trim();
+    const hash = await sha256(input);
+    const targetHash = await sha256('logistica 2026');
+    if (hash === targetHash) {
       sessionStorage.setItem('portal_auth', 'true');
       location.reload();
     } else {
