@@ -815,7 +815,7 @@ function updateHeatmap() {
   const pasillos = {};
 
   DATA.forEach(r => {
-    const p = r.u.match(/^[A-Z]+/);
+    const p = r.u.match(/^([^-]+)(?=-)/);
     if (p) {
       if (!pasillos[p[0]]) {
         pasillos[p[0]] = { total: 0, occ: 0 };
@@ -890,7 +890,7 @@ function updatePasillos() {
   const pasillos = {};
   
   DATA.forEach(r => {
-    const p = r.u.match(/^[A-Z]+/);
+    const p = r.u.match(/^([^-]+)(?=-)/);
     if (p) {
       if (!pasillos[p[0]]) {
         pasillos[p[0]] = { total: 0, occ: 0, vac: 0 };
