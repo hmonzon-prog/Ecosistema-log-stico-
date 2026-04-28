@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loginter CMA — Resumen Ejecutivo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      /* Paleta restringida y corporativa (modo claro/limpio) */
+      --primary: #1e3a8a;       /* Azul oscuro corporativo principal */
+      --primary-lt: #3b82f6;    /* Azul claro de acento */
+      --text: #1e293b;          /* Gris muy oscuro para texto principal */
+      --muted: #64748b;         /* Gris medio para subtítulos y ejes */
+      
+      --bg: #f8fafc;            /* Fondo general sutil grisáceo/blanco */
+      --surface: #ffffff;       /* Fondo de las tarjetas blanco puro */
+      --border: #e2e8f0;        /* Bordes sutiles grises */
+      
+      /* Colores semánticos muy puntuales (Alertas, OK, etc) */
+      --ok: #0f766e;            /* Verde/Teal formal para OK */
+      --warn: #ea580c;          /* Naranja tenue para avisos */
+      --error: #e11d48;         /* Rojo/Coral formal para errores */
+
+      /* Aliases backwards compatibility para gráficos inline */
+      --blue: var(--primary);
+      --blue-lt: var(--primary-lt);
+      --green: var(--ok);
+      --yellow: var(--warn);
+      --orange: var(--warn);
+      --red: var(--error);
+      --purple: var(--primary-lt);
+      --cyan: var(--primary);
+    }
+    
+    html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow:hidden;user-select:none;}
+
+    /* BG */
+    #bg{display:none;} /* Sin fondos extraños, 100% liso y corporativo */
+
+    /* APP */
+    #app{position:relative;z-index:1;width:100vw;height:100vh;display:flex;flex-direction:column;}
+
+    /* TOPBAR */
+    #topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 30px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+    .tb-brand{display:flex;align-items:center;gap:15px;}
+    .tb-logo{width:36px;height:36px;border-radius:4px;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;}
+    .tb-name{font-family:'Barlow Condensed',sans-serif;font-size:1.3rem;font-weight:700;letter-spacing:.5px;color:var(--primary);}
+    .tb-sub{font-size:.7rem;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-top:2px;font-weight:600;}
+    .tb-right{display:flex;align-items:center;gap:15px;}
+    .tb-badge{display:flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid var(--border);border-radius:4px;padding:4px 12px;font-size:.7rem;font-weight:600;color:var(--muted);}
+    .tb-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--ok);animation:blink 2s infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+    #clock{font-size:.8rem;color:var(--primary);font-variant-numeric:tabular-nums;font-weight:600;}
+    .tb-status{font-size:.7rem;padding:4px 12px;border-radius:4px;font-weight:600;}
+    .tb-status.loading{background:#fff7ed;color:var(--warn);}
+    .tb-status.ok{background:#f0fdf4;color:var(--ok);}
+    .tb-status.partial{background:#fff7ed;color:var(--warn);}
+    #btn-close{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:6px 14px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;}
+    #btn-close:hover{background:#f8fafc;color:var(--text);}
+
+    /* PROGRESS */
+    #progress-track{height:4px;background:var(--border);flex-shrink:0;}
+    #progress-fill{height:100%;background:var(--primary);width:0%;transition:width .2s linear;}
+
+    /* SLIDE AREA */
+    #slide-area{flex:1;position:relative;overflow:hidden;padding:20px;}
+    .slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 50px;opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease;pointer-events:none;}
+    .slide.active{opacity:1;transform:translateY(0);pointer-events:all;}
+    .slide.exit{opacity:0;transform:translateY(-20px);}
+
+    /* PORTADA */
+    #slide-portada{text-align:center;}
+    .portada-eyebrow{font-size:.85rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:15px;}
+    .portada-title{font-family:'Barlow Condensed',sans-serif;font-size:clamp(3.5rem,7vw,5.5rem);font-weight:800;line-height:1;color:var(--primary);margin-bottom:15px;}
+    .portada-subtitle{font-size:1rem;color:var(--muted);margin-bottom:40px;max-width:600px;margin-left:auto;margin-right:auto;line-height:1.6;}
+    .portada-grid{display:flex;gap:15px;flex-wrap:wrap;justify-content:center;}
+    .portada-stat{background:var(--surface);border:1px solid var(--border);padding:24px 30px;min-width:160px;text-align:center;}
+    .portada-stat .val{font-size:2.5rem;font-weight:800;line-height:1;font-family:'Barlow Condensed',sans-serif;}
+    .portada-stat .lbl{font-size:.7rem;color:var(--muted);margin-top:10px;text-transform:uppercase;font-weight:600;}
+    .portada-footer{margin-top:40px;font-size:.75rem;color:var(--muted);font-weight:500;}
+
+    /* SLIDE HEADER */
+    .slide-header{text-align:center;margin-bottom:25px;}
+    .slide-title{font-family:'Barlow Condensed',sans-serif;font-size:clamp(1.8rem,3.5vw,2.5rem);font-weight:700;margin-bottom:6px;color:var(--primary);}
+    .slide-desc{font-size:.85rem;color:var(--muted);}
+    .slide-lastupdated{font-size:.7rem;color:var(--muted);margin-top:6px;}
+
+    /* KPI GRID */
+    .kpi-grid{display:grid;gap:15px;width:100%;max-width:1100px;}
+    .kpi-grid.cols-4{grid-template-columns:repeat(4,1fr);}
+    .kpi-grid.cols-3{grid-template-columns:repeat(3,1fr);}
+
+    /* ESTILO PLANO DE TARJETAS (BI tradicional) */
+    .kpi-card{background:var(--surface);border:1px solid var(--border);border-top: 4px solid var(--muted);padding:22px;position:relative;display:flex;flex-direction:column;}
+    
+    /* Mapeo de colores a una paleta restringida: Se sobreescriben colores estridentes a colores sobrios */
+    .kpi-card.blue, .kpi-card.purple, .kpi-card.cyan { border-top-color: var(--primary-lt); }
+    .kpi-card.green { border-top-color: var(--ok); }
+    .kpi-card.yellow, .kpi-card.orange { border-top-color: var(--warn); }
+    .kpi-card.red { border-top-color: var(--error); }
+
+    .kpi-label{font-size:.65rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+    .kpi-value{font-family:'Barlow Condensed',sans-serif;font-size:clamp(2rem,4vw,3.2rem);font-weight:700;line-height:1;margin-bottom:6px;}
+    
+    .kpi-value.green{color:var(--ok);} 
+    .kpi-value.yellow, .kpi-value.orange{color:var(--warn);} 
+    .kpi-value.red{color:var(--error);}
+    /* Los colores neutros o descriptivos quedan en primario oscuro/texto */
+    .kpi-value.blue, .kpi-value.purple, .kpi-value.cyan, .kpi-value.white{color:var(--text);}
+    
+    .kpi-sub{font-size:.75rem;color:var(--muted);}
+    
+    .kpi-trend{margin-top:10px;display:inline-flex;align-items:center;gap:4px;padding:4px 8px;font-size:.7rem;font-weight:600;}
+    .kpi-trend.up{color:var(--ok);}
+    .kpi-trend.down{color:var(--error);}
+    .kpi-trend.flat{color:var(--warn);}
+
+    .mini-bar-wrap{margin-top:12px;}
+    .mini-bar-bg{height:8px;background:var(--border);overflow:hidden;}
+    .mini-bar-fill{height:100%;}
+
+    .donut-row{display:flex;flex-direction:column;gap:8px;}
+    .donut-item{display:flex;align-items:center;gap:10px;font-size:.75rem;color:var(--text);}
+    .donut-dot{width:12px;height:12px;flex-shrink:0;}
+    .donut-bar{flex:1;height:8px;background:var(--border);overflow:hidden;}
+    .donut-bar-fill{height:100%;}
+    .donut-pct{font-weight:700;font-size:.75rem;min-width:32px;text-align:right;}
+
+    /* LOADING OVERLAY */
+    #loading-overlay{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);transition:opacity .4s;}
+    #loading-overlay.hidden{opacity:0;pointer-events:none;}
+    .loader{width:42px;height:42px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #loading-msg{font-size:.8rem;color:var(--muted);font-weight:600;}
+    #loading-sources{margin-top:15px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+    
+    .src-badge{font-size:.65rem;padding:4px 10px;border:1px solid;font-weight:600;}
+    .src-badge.wait{background:#f8fafc;border-color:var(--border);color:var(--muted);}
+    .src-badge.done{background:#f0fdf4;border-color:#bbf7d0;color:var(--ok);}
+    .src-badge.err{background:#fff1f2;border-color:#fecdd3;color:var(--error);}
+
+    /* BOTTOM NAV */
+    #bottom-nav{display:flex;align-items:center;justify-content:center;gap:15px;padding:15px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;}
+    .nav-btn{background:transparent;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 18px;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;}
+    .nav-btn:hover{background:#f8fafc;border-color:var(--muted);}
+    .nav-btn.primary{background:var(--primary);border-color:transparent;color:#fff;}
+    .nav-btn.primary:hover{background:#1e40af;}
+    .nav-btn:disabled{opacity:.4;cursor:not-allowed;}
+    
+    #slide-counter{font-size:.8rem;color:var(--muted);min-width:60px;text-align:center;font-variant-numeric:tabular-nums;font-weight:700;}
+    .dots-wrap{display:flex;gap:8px;align-items:center;}
+    .dot{width:10px;height:10px;background:var(--border);cursor:pointer;transition:all .3s;}
+    .dot.active{background:var(--primary-lt);width:24px;}
+    
+    #timer-ring-wrap{position:relative;width:34px;height:34px;}
+    #timer-ring-wrap svg{position:absolute;inset:0;transform:rotate(-90deg);}
+    #timer-arc{stroke-dasharray:94.25;stroke-dashoffset:94.25;}
+    #timer-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:var(--muted);}
+
+    /* ANIMATIONS */
+    @keyframes countUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .slide.active .kpi-value{animation:countUp .5s ease forwards;}
+    .slide.active .kpi-card:nth-child(1) .kpi-value{animation-delay:.04s}
+    .slide.active .kpi-card:nth-child(2) .kpi-value{animation-delay:.10s}
+    .slide.active .kpi-card:nth-child(3) .kpi-value{animation-delay:.16s}
+    .slide.active .kpi-card:nth-child(4) .kpi-value{animation-delay:.22s}
+    @keyframes fillBar{from{width:0}}
+    .slide.active .mini-bar-fill{animation:fillBar .8s ease forwards;}
+
+    @media(max-width:860px){
+      .kpi-grid.cols-4{grid-template-columns:repeat(2,1fr);}
+      .slide{padding:18px 18px;}
+    }
+  </style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="tb-brand">
+      <div class="tb-logo">L</div>
+      <div>
+        <div class="tb-name">LOGINTER</div>
+        <div class="tb-sub">Operación CMA · Resumen Ejecutivo</div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-badge">DATOS EN VIVO</div>
+      <span class="tb-status loading" id="data-status">⏳ Conectando…</span>
+      <div id="clock">--:--:--</div>
+      <button id="btn-close" onclick="window.close()">✕ Cerrar</button>
+    </div>
+  </div>
+  <div id="progress-track"><div id="progress-fill"></div></div>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loading-overlay">
+    <div class="loader"></div>
+    <div id="loading-msg">Conectando con Google Sheets…</div>
+    <div id="loading-sources">
+      <span class="src-badge wait" id="src-ocup">🏭 Ocupación</span>
+      <span class="src-badge wait" id="src-inv">📦 Inventario</span>
+      <span class="src-badge wait" id="src-stock">📊 Stock General</span>
+      <span class="src-badge wait" id="src-rot">🔄 Rotación</span>
+      <span class="src-badge wait" id="src-bloq">🔒 Bloqueados</span>
+    </div>
+  </div>
+
+  <!-- SLIDES -->
+  <div id="slide-area">
+
+    <!-- ─── SLIDE 0: PORTADA ─── -->
+    <div class="slide active" data-index="0">
+      <div class="portada-eyebrow" id="portada-eyebrow">Resumen Ejecutivo</div>
+      <div class="portada-title">Ecosistema<br>Logístico</div>
+      <div class="portada-subtitle">Visibilidad operativa en tiempo real de los procesos críticos del depósito CMA — Loginter.</div>
+      <div class="portada-grid">
+        <div class="portada-stat">
+          <div class="val" style="color:var(--blue-lt)">7</div>
+          <div class="lbl">Dashboards</div>
+        </div>
+        <div class="portada-stat">
+          <div class="val" style="color:var(--green)" id="p-ocupacion">—</div>
+          <div class="lbl">Ocupación</div>
+        </div>
+        <div class="portada-stat">
+          <div class="val" style="color:var(--yellow)" id="p-exactitud">—</div>
+          <div class="lbl">Exactitud Inv.</div>
+        </div>
+        <div class="portada-stat">
+          <div class="val" style="color:var(--cyan)" id="p-unidades">—</div>
+          <div class="lbl">Uds Stock</div>
+        </div>
+        <div class="portada-stat">
+          <div class="val" style="color:var(--purple)" id="p-skus">—</div>
+          <div class="lbl">SKUs</div>
+        </div>
+      </div>
+      <div class="portada-footer" id="portada-date">Cargando…</div>
+    </div>
+
+    <!-- ─── SLIDE 1: OCUPACIÓN ─── -->
+    <div class="slide" data-index="1">
+      <div class="slide-header">
+        <div class="slide-icon" style="background:linear-gradient(135deg,rgba(26,86,219,.25),rgba(99,102,241,.25));border:1px solid rgba(26,86,219,.3)">🏭</div>
+        <div class="slide-title">Ocupación del Depósito</div>
+        <div class="slide-desc">Estado en tiempo real · Sectores: CHERY, Selectivo Viejo, Selectivo Nuevo, Cajones Chery</div>
+        <div class="slide-lastupdated" id="ocup-updated"></div>
+      </div>
+      <div class="kpi-grid cols-4">
+        <div class="kpi-card blue">
+          <div class="kpi-label">Posiciones Totales</div>
+          <div class="kpi-value blue" id="ocup-total">—</div>
+          <div class="kpi-sub">todas las ubicaciones</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Ocupadas</div>
+          <div class="kpi-value blue" id="ocup-ocupadas">—</div>
+          <div class="kpi-sub" id="ocup-pct-sub">—</div>
+          <div class="mini-bar-wrap"><div class="mini-bar-bg"><div class="mini-bar-fill" id="ocup-bar" style="background:linear-gradient(90deg,var(--blue-lt),var(--cyan))"></div></div></div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Disponibles (Vacías OK)</div>
+          <div class="kpi-value green" id="ocup-disponibles">—</div>
+          <div class="kpi-sub" id="ocup-disp-pct">—</div>
+          <span class="kpi-trend up">▲ Libres para usar</span>
+        </div>
+        <div class="kpi-card yellow">
+          <div class="kpi-label">No Disponibles (NOOK)</div>
+          <div class="kpi-value yellow" id="ocup-nook">—</div>
+          <div class="kpi-sub">posiciones bloqueadas</div>
+          <span class="kpi-trend flat">⚠ Monitoreo</span>
+        </div>
+        <div class="kpi-card purple" style="grid-column:1/3">
+          <div class="kpi-label">Ocupación por Tipo</div>
+          <div class="donut-row" style="margin-top:8px">
+            <div class="donut-item">
+              <div class="donut-dot" style="background:var(--blue-lt)"></div><span>Altura</span>
+              <div class="donut-bar"><div class="donut-bar-fill" id="bar-altura" style="background:var(--blue-lt)"></div></div>
+              <span class="donut-pct" style="color:var(--blue-lt)" id="pct-altura">—</span>
+            </div>
+            <div class="donut-item">
+              <div class="donut-dot" style="background:var(--green)"></div><span>Picking</span>
+              <div class="donut-bar"><div class="donut-bar-fill" id="bar-picking" style="background:var(--green)"></div></div>
+              <span class="donut-pct" style="color:var(--green)" id="pct-picking">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-card cyan" style="grid-column:3/5">
+          <div class="kpi-label">% Ocupación General</div>
+          <div class="kpi-value cyan" id="ocup-pct">—</div>
+          <div class="kpi-sub">Ocupadas / (Ocupadas + Vacías OK)</div>
+          <div style="margin-top:8px;font-size:.68rem" id="ocup-nook-ocup-wrap"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 2: INVENTARIO CÍCLICO ─── -->
+    <div class="slide" data-index="2">
+      <div class="slide-header">
+        <div class="slide-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.25),rgba(52,211,153,.15));border:1px solid rgba(16,185,129,.3)">📦</div>
+        <div class="slide-title">Inventario Cíclico — MotoPartes</div>
+        <div class="slide-desc">Exactitud, discrepancias y avance del inventario cíclico · Datos de <strong>Abril 2026</strong> — Google Sheets en tiempo real</div>
+        <div class="slide-lastupdated" id="inv-updated"></div>
+      </div>
+      <div class="kpi-grid cols-4">
+        <div class="kpi-card green">
+          <div class="kpi-label">Exactitud General</div>
+          <div class="kpi-value green" id="inv-exactitud">—</div>
+          <div class="kpi-sub">registros sin diferencia</div>
+          <div class="mini-bar-wrap"><div class="mini-bar-bg"><div class="mini-bar-fill" id="inv-exact-bar" style="background:linear-gradient(90deg,var(--green),#34d399)"></div></div></div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Total Registros</div>
+          <div class="kpi-value blue" id="inv-total">—</div>
+          <div class="kpi-sub">líneas en inventario</div>
+        </div>
+        <div class="kpi-card yellow">
+          <div class="kpi-label">Con Discrepancia</div>
+          <div class="kpi-value yellow" id="inv-diff">—</div>
+          <div class="kpi-sub" id="inv-error-pct">—</div>
+          <span class="kpi-trend flat" id="inv-diff-trend">⚠ Tasa error</span>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">SKUs Únicos</div>
+          <div class="kpi-value purple" id="inv-skus">—</div>
+          <div class="kpi-sub">referencias distintas</div>
+        </div>
+        <div class="kpi-card cyan" style="grid-column:1/3">
+          <div class="kpi-label">Top Marcas con Discrepancias</div>
+          <div id="inv-top-marcas" class="donut-row" style="margin-top:8px">
+            <div class="donut-item"><span style="color:var(--muted);font-size:.7rem">Cargando…</span></div>
+          </div>
+        </div>
+        <div class="kpi-card blue" style="grid-column:3/5">
+          <div class="kpi-label">Metas de Precisión y Avance Mensual</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:7px">
+            
+            <!-- Exactitud -->
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span style="font-size:.65rem;font-weight:700;color:var(--muted)">✔ OBJETIVOS DE EXACTITUD</span>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:.68rem;margin-bottom:3px">
+                  <span>Posiciones (LOC)</span><span style="color:var(--text);font-weight:700" id="obj-pos">—</span>
+                </div>
+                <div class="mini-bar-bg"><div class="mini-bar-fill" id="obj-pos-bar" style="background:var(--ok)"></div></div>
+                <div style="font-size:.6rem;color:var(--muted);margin-top:2px">Meta de calidad: 95,0%</div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:.68rem;margin-bottom:3px">
+                  <span>Artículos (SKUs)</span><span style="color:var(--text);font-weight:700" id="obj-sku">—</span>
+                </div>
+                <div class="mini-bar-bg"><div class="mini-bar-fill" id="obj-sku-bar" style="background:var(--ok)"></div></div>
+                <div style="font-size:.6rem;color:var(--muted);margin-top:2px">Meta de calidad: 90,5%</div>
+              </div>
+            </div>
+
+            <!-- Cobertura -->
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span style="font-size:.65rem;font-weight:700;color:var(--muted)">🏃‍♂️ AVANCE DE COBERTURA</span>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:.68rem;margin-bottom:3px">
+                  <span>Conteo de LOCs</span><span style="color:var(--text);font-weight:700" id="cob-pos">—</span>
+                </div>
+                <div class="mini-bar-bg"><div class="mini-bar-fill" id="cob-pos-bar" style="background:var(--primary-lt)"></div></div>
+                <div style="font-size:.6rem;color:var(--muted);margin-top:2px" id="cob-pos-meta">Meta mensual: 1500 loc.</div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:.68rem;margin-bottom:3px">
+                  <span>Conteo de Unidades</span><span style="color:var(--text);font-weight:700" id="cob-sku">—</span>
+                </div>
+                <div class="mini-bar-bg"><div class="mini-bar-fill" id="cob-sku-bar" style="background:var(--primary-lt)"></div></div>
+                <div style="font-size:.6rem;color:var(--muted);margin-top:2px" id="cob-sku-meta">Meta mensual: 22.000 (~1.000/día)</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 3: STOCK GENERAL ─── -->
+    <div class="slide" data-index="3">
+      <div class="slide-header">
+        <div class="slide-icon" style="background:linear-gradient(135deg,rgba(249,115,22,.25),rgba(251,146,60,.15));border:1px solid rgba(249,115,22,.3)">📊</div>
+        <div class="slide-title">Stock General</div>
+        <div class="slide-desc">Visibilidad del inventario total por marca, estado OK/HOLD y rotación ABC — Tiempo real</div>
+        <div class="slide-lastupdated" id="stock-updated"></div>
+      </div>
+      <div class="kpi-grid cols-4">
+        <div class="kpi-card orange">
+          <div class="kpi-label">Unidades Totales</div>
+          <div class="kpi-value orange" id="stk-total">—</div>
+          <div class="kpi-sub">en el depósito</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Disponible (OK)</div>
+          <div class="kpi-value green" id="stk-disp">—</div>
+          <div class="kpi-sub" id="stk-disp-pct">—</div>
+          <div class="mini-bar-wrap"><div class="mini-bar-bg"><div class="mini-bar-fill" id="stk-disp-bar" style="background:var(--green)"></div></div></div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">HOLD (Bloqueado)</div>
+          <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:2px">
+            <div class="kpi-value red" id="stk-hold" style="margin-bottom:0">—</div>
+            <div style="font-size:0.75rem; font-weight:700; color:var(--muted)">uds</div>
+          </div>
+          <div class="kpi-sub" style="display:flex; align-items:center; gap:8px">
+            <span id="stk-hold-pct">—</span>
+            <span class="kpi-trend down" id="stk-hold-trend" style="margin-top:0">▼ Requiere atención</span>
+          </div>
+          <div style="margin-top:12px; border-top:1px dashed var(--border); padding-top:12px; flex:1">
+             <div style="font-size:0.7rem; font-weight:700; color:var(--muted); margin-bottom:2px">CANTIDAD DE SKUs</div>
+             <div style="display:flex; align-items:baseline; gap:5px; color:var(--text)">
+               <span id="stk-hold-skus" style="font-family:'Barlow Condensed'; font-size:1.6rem; font-weight:700">—</span> 
+             </div>
+             <div class="kpi-sub" id="stk-hold-eval-sub" style="margin-top:2px">—</div>
+          </div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">SKUs Únicos</div>
+          <div class="kpi-value blue" id="stk-skus">—</div>
+          <div class="kpi-sub" id="stk-marcas-sub">—</div>
+        </div>
+        
+        <!-- ESTADOS SECUNDARIOS -->
+        <div class="kpi-card yellow" style="grid-column:1/3">
+          <div class="kpi-label">Estado: AJUSTE (En Proceso)</div>
+          <div class="kpi-value yellow" id="stk-ajuste">—</div>
+          <div class="kpi-sub" id="stk-ajuste-pct">—</div>
+        </div>
+        <div class="kpi-card purple" style="grid-column:3/5">
+          <div class="kpi-label">Estado: SCRAP (Descartado)</div>
+          <div class="kpi-value purple" id="stk-scrap">—</div>
+          <div class="kpi-sub" id="stk-scrap-pct">—</div>
+        </div>
+        
+        <div class="kpi-card purple" style="grid-column:1/3">
+          <div class="kpi-label">Análisis de Rotación ABC</div>
+          <div id="stk-rotacion" class="donut-row" style="margin-top:8px">
+            <div class="donut-item"><span style="color:var(--muted);font-size:.7rem">Cargando…</span></div>
+          </div>
+        </div>
+        <div class="kpi-card cyan" style="grid-column:3/5">
+          <div class="kpi-label">Top Marcas por Volumen</div>
+          <div id="stk-top-marcas" class="donut-row" style="margin-top:8px">
+            <div class="donut-item"><span style="color:var(--muted);font-size:.7rem">Cargando…</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 4: ANÁLISIS DE ROTACIÓN ─── -->
+    <div class="slide" data-index="4">
+      <div class="slide-header">
+        <div class="slide-icon" style="background:linear-gradient(135deg,rgba(59,130,246,.25),rgba(96,165,250,.15));border:1px solid rgba(59,130,246,.3)">🔄</div>
+        <div class="slide-title">Análisis de Rotación</div>
+        <div class="slide-desc">Clasificación ABC y ubicaciones de SKUs según volumen operativo</div>
+        <div class="slide-lastupdated" id="rot-updated"></div>
+      </div>
+      <div class="kpi-grid cols-4">
+        <div class="kpi-card blue">
+           <div class="kpi-label">SKUs Alta Rot. (A)</div>
+           <div class="kpi-value blue" id="rot-a-sku">—</div>
+           <div class="kpi-sub" id="rot-a-uds">— uds</div>
+           <div class="mini-bar-wrap"><div class="mini-bar-bg"><div class="mini-bar-fill" id="rot-a-bar" style="background:var(--blue-lt)"></div></div></div>
+        </div>
+        <div class="kpi-card green">
+           <div class="kpi-label">% En Piso (Correcto)</div>
+           <div class="kpi-value green" id="rot-piso-pct">—</div>
+           <div class="kpi-sub">de los SKUs Tipo A</div>
+           <span class="kpi-trend up">✓ Ubicación óptima</span>
+        </div>
+        <div class="kpi-card red" style="grid-column: 3/5">
+           <div class="kpi-label">Atención: Tipo A en Altura</div>
+           <div style="display:flex;align-items:center;gap:15px;margin-top:10px">
+             <div class="kpi-value red" id="rot-alt-uds">—</div>
+             <div>
+               <div style="font-size:.7rem;font-weight:700" id="rot-alt-skus">— SKUs</div>
+               <div class="kpi-sub" style="margin-top:2px">requieren ser bajados a piso</div>
+             </div>
+           </div>
+           <div style="margin-top:8px;font-size:.65rem;color:var(--muted)" id="rot-criticos">— críticos (100% en altura)</div>
+        </div>
+        <!-- Fila 2 -->
+        <div class="kpi-card yellow">
+           <div class="kpi-label">Sin Rotación (SR)</div>
+           <div class="kpi-value yellow" id="rot-sr-sku">—</div>
+           <div class="kpi-sub" id="rot-sr-uds">— uds</div>
+           <div class="mini-bar-wrap"><div class="mini-bar-bg"><div class="mini-bar-fill" id="rot-sr-bar" style="background:var(--yellow)"></div></div></div>
+        </div>
+        <div class="kpi-card red" style="grid-column: 2/5">
+           <div class="kpi-label">Atención: Sin Rotación en Piso</div>
+           <div style="display:flex;align-items:center;gap:15px;margin-top:10px">
+             <div class="kpi-value red" id="rot-sr-piso-uds">—</div>
+             <div>
+               <div style="font-size:.7rem;font-weight:700" id="rot-sr-piso-skus">— SKUs</div>
+               <div class="kpi-sub" style="margin-top:2px">ocupando ubicaciones de picking (se debe subir a altura o sacar)</div>
+             </div>
+           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 5: ANÁLISIS DE BLOQUEADOS ─── -->
+    <div class="slide" data-index="5">
+      <div class="slide-header">
+        <div class="slide-icon" style="background:linear-gradient(135deg,rgba(239,68,68,.25),rgba(248,113,113,.15));border:1px solid rgba(239,68,68,.3)">🔒</div>
+        <div class="slide-title">Análisis de Bloqueados</div>
+        <div class="slide-desc">Mercadería inmovilizada · Evolución histórica vs Mayo 2025 · Datos en vivo</div>
+        <div class="slide-lastupdated" id="bloq-updated"></div>
+      </div>
+      <div class="kpi-grid cols-4">
+        <div class="kpi-card red">
+          <div class="kpi-label">SKUs Bloqueados (Hoy)</div>
+          <div class="kpi-value red" id="bloq-skus">—</div>
+          <div class="kpi-sub" id="bloq-skus-sub">códigos en riesgo</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Unidades Bloqueadas (Hoy)</div>
+          <div class="kpi-value red" id="bloq-qty">—</div>
+          <div class="kpi-sub" id="bloq-qty-sub">volumen total inmovilizado</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">SKUs Desbloqueados</div>
+          <div class="kpi-value green" id="bloq-desbloq-skus">—</div>
+          <div class="kpi-sub" id="bloq-desbloq-sub">códigos liberados</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Unidades Liberadas</div>
+          <div class="kpi-value green" id="bloq-desbloq-qty">—</div>
+          <div class="kpi-sub">volumen recuperado</div>
+        </div>
+        <div class="kpi-card blue" style="grid-column:1/3">
+          <div class="kpi-label">Evolución Histórica (Mayo 2025 → Hoy)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:8px">
+            <div>
+              <div style="font-size:.65rem;font-weight:700;color:var(--muted)">VARIEDAD DE SKUs</div>
+              <div style="display:flex;align-items:baseline;gap:8px;margin-top:5px">
+                <span style="font-family:'Barlow Condensed';font-size:1.6rem;font-weight:700" id="bloq-hist-sku">—</span>
+              </div>
+              <div class="kpi-sub" id="bloq-hist-sku-sub">—</div>
+            </div>
+            <div>
+              <div style="font-size:.65rem;font-weight:700;color:var(--muted)">VOLUMEN TOTAL (QTY)</div>
+              <div style="display:flex;align-items:baseline;gap:8px;margin-top:5px">
+                <span style="font-family:'Barlow Condensed';font-size:1.6rem;font-weight:700" id="bloq-hist-qty">—</span>
+              </div>
+              <div class="kpi-sub" id="bloq-hist-qty-sub">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-card yellow" style="grid-column:3/5">
+          <div class="kpi-label">Estado de la Gestión</div>
+          <div id="bloq-gestion" class="donut-row" style="margin-top:8px">
+            <div class="donut-item"><span style="color:var(--muted);font-size:.7rem">Cargando…</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 6: CHECKLIST ─── -->
+    <div class="slide" data-index="6">
+      <div class="slide-header">
+        <div class="slide-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(167,139,250,.15));border:1px solid rgba(139,92,246,.3)">✅</div>
+        <div class="slide-title">Check List de Tareas</div>
+        <div class="slide-desc">Seguimiento de tareas rutinarias, proyectos y mejoras operativas del depósito</div>
+      </div>
+      <div class="kpi-grid cols-4">
+        <div class="kpi-card green">
+          <div class="kpi-label">Checklist Rutinario</div>
+          <div class="kpi-value green" id="ck-rut-val">—</div>
+          <div class="kpi-sub" id="ck-rut-sub">—</div>
+          <div class="mini-bar-wrap"><div class="mini-bar-bg"><div class="mini-bar-fill" id="ck-rut-bar" style="background:linear-gradient(90deg,var(--green),#34d399)"></div></div></div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Tareas a Realizar</div>
+          <div class="kpi-value blue" id="ck-real-val">—</div>
+          <div class="kpi-sub" id="ck-real-sub">—</div>
+          <div class="mini-bar-wrap"><div class="mini-bar-bg"><div class="mini-bar-fill" id="ck-real-bar" style="background:var(--blue-lt)"></div></div></div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Mejoras Planillas</div>
+          <div class="kpi-value purple" id="ck-mej-val">—</div>
+          <div class="kpi-sub" id="ck-mej-sub">—</div>
+          <div class="mini-bar-wrap"><div class="mini-bar-bg"><div class="mini-bar-fill" id="ck-mej-bar" style="background:var(--purple)"></div></div></div>
+        </div>
+        <div class="kpi-card cyan">
+          <div class="kpi-label">Mejoras Operativas</div>
+          <div class="kpi-value cyan" id="ck-op-val">—</div>
+          <div class="kpi-sub" id="ck-op-sub">—</div>
+          <div class="mini-bar-wrap"><div class="mini-bar-bg"><div class="mini-bar-fill" id="ck-op-bar" style="background:var(--cyan)"></div></div></div>
+        </div>
+        <div class="kpi-card yellow" style="grid-column:1/3">
+          <div class="kpi-label">Checklist Rutinario — Detalle</div>
+          <div id="ck-rut-list" class="donut-row" style="margin-top:8px"></div>
+        </div>
+        <div class="kpi-card green" style="grid-column:3/5">
+          <div class="kpi-label">Cumplimiento Global (todas las categorías)</div>
+          <div class="kpi-value green" id="ck-general-val">—</div>
+          <div class="kpi-sub" id="ck-general-sub">tareas completadas de todas las categorías</div>
+          <div class="mini-bar-wrap"><div class="mini-bar-bg"><div class="mini-bar-fill" id="ck-gen-bar" style="background:linear-gradient(90deg,var(--green),var(--cyan))"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 7: CIERRE ─── -->
+    <div class="slide" data-index="7">
+      <div class="portada-eyebrow">Estado Operativo General · Loginter CMA</div>
+      <div class="portada-title" style="font-size:clamp(2rem,5vw,4rem)">
+        Dashboard<br>
+        <span id="cierre-estado" style="background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent">Consolidado</span>
+      </div>
+      <div class="portada-subtitle" id="cierre-desc">Calculando estado operativo…</div>
+      <div class="portada-grid">
+        <div class="portada-stat">
+          <div class="val" style="color:var(--blue-lt)" id="cierre-ocup">—</div>
+          <div class="lbl">Ocupación</div>
+        </div>
+        <div class="portada-stat">
+          <div class="val" style="color:var(--green)" id="cierre-exact">—</div>
+          <div class="lbl">Exactitud Inv.</div>
+        </div>
+        <div class="portada-stat">
+          <div class="val" style="color:var(--orange)" id="cierre-unidades">—</div>
+          <div class="lbl">Uds Stock</div>
+        </div>
+        <div class="portada-stat">
+          <div class="val" style="color:var(--red)" id="cierre-hold">—</div>
+          <div class="lbl">En HOLD</div>
+        </div>
+        <div class="portada-stat">
+          <div class="val" style="color:var(--purple)" id="cierre-ck">—</div>
+          <div class="lbl">Checklist</div>
+        </div>
+      </div>
+      <div class="portada-footer">Loginter · Operación CMA · <span id="cierre-fecha"></span></div>
+    </div>
+
+  </div><!-- /slide-area -->
+
+  <!-- BOTTOM NAV -->
+  <div id="bottom-nav">
+    <button class="nav-btn" id="btn-prev">◀ Anterior</button>
+    <div class="dots-wrap" id="dots-wrap"></div>
+    <div id="timer-ring-wrap">
+      <svg width="32" height="32" viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3"/>
+        <circle id="timer-arc" cx="18" cy="18" r="15" fill="none" stroke="var(--blue-lt)" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <div id="timer-label">10</div>
+    </div>
+    <div id="slide-counter">1 / 7</div>
+    <button class="nav-btn primary" id="btn-play">⏸ Pausar</button>
+    <button class="nav-btn" id="btn-next">Siguiente ▶</button>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+/* ═══════════════════════════════
+   CHECKLIST (datos del Excel)
+═══════════════════════════════ */
+const CK = {
+  checklist: [
+    {done:true, name:'QUIEBRE'},{done:true, name:'REPORTE 24/14'},{done:true, name:'AGEING'},
+    {done:false,name:'GRÁFICA DE VACÍAS'},{done:false,name:'ANÁLISIS DE INTRUSOS'},
+    {done:true, name:'UNIFICACIÓN ALTURA'},{done:true, name:'CÍCLICOS (GENERAL)'},
+    {done:false,name:'LLENADO DE BALDAS'},{done:true, name:'UNIFICACIÓN (PICKING)'},
+    {done:false,name:'REABASTECIMIENTO'},{done:false,name:'2° CONTROL DIF IMPO'},
+    {done:false,name:'CÍCLICOS NEUMÁTICOS'},{done:false,name:'ANÁLISIS SOBRANTES'},
+    {done:true, name:'FOTOS'},{done:true, name:'ANÁLISIS ADM.'},
+    {done:false,name:'SOLICITUD AJUSTES'},{done:false,name:'ANÁLISIS BLOQUEADOS'},{done:false,name:'RECLAMOS'},
+  ],
+  realizar:[{done:true},{done:false},{done:false},{done:true},{done:false},{done:true},{done:true},{done:true},{done:false},{done:true},{done:false}],
+  mejoras: [{done:true},{done:true},{done:false},{done:false},{done:false},{done:false},{done:false},{done:true},{done:false},{done:true},{done:true},{done:true}],
+  operativas:[{done:true},{done:false},{done:true},{done:true},{done:false},{done:false},{done:true},{done:true}]
+};
+
+/* ═══════════════════════════════
+   GOOGLE SHEETS
+═══════════════════════════════ */
+const OCUP_ID  = '1PzWxSUSEFAhR72J7N9Ag2Qn_utms8noGXlNF4_y3PCk', OCUP_GID  = '0';
+const INV_ID   = '1ypLvmCgCL8hmXYoFYJBvSY8nr7mLnI8RqU2dbGsMSCY', INV_GID   = '1457255242';
+const STOCK_ID = '1qnI-hGlXTMMJ9J5xC4Yi_21vqp9Nhxsfk4MSY34UAL0', STOCK_GID = '0';
+const ROT_ID = '16zPDdbhSWOnKQn8xMcmgGxvwPrZRqL2R73a9tIP_VFM', ROT_TAB = 'KPIs_Rotacion';
+const BLOQ_SHEET_ID = '1gy28H7ozTdNGkP-IsmkYVORzWLz0esG9mU4A72M23J0';
+
+/* ═══════════════════════════════
+   STATE
+═══════════════════════════════ */
+const SLIDE_DURATION = 10000;
+const slides = document.querySelectorAll('.slide');
+const N = slides.length;
+let current = 0, playing = false; // start paused until loaded
+let timer = null, timerStart = null, rafId = null;
+let sourcesLoaded = 0;
+const TOTAL_SOURCES = 5;
+const globalData = {};
+
+/* ═══════════════════════════════
+   CLOCK & DATES
+═══════════════════════════════ */
+const fmt = n => {
+  const num = typeof n === 'string' ? parseFloat(n.replace(/[^\d.\-]/g, '')) : (n ?? 0);
+  return isNaN(num) ? '—' : num.toLocaleString('es-AR');
+};
+const now = new Date();
+function updateClock(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+updateClock(); setInterval(updateClock,1000);
+document.getElementById('portada-date').textContent=now.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase());
+document.getElementById('portada-eyebrow').textContent='Resumen Ejecutivo · '+now.toLocaleDateString('es-AR',{month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase());
+document.getElementById('cierre-fecha').textContent=now.toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'});
+
+/* ═══════════════════════════════
+   CHECKLIST RENDER
+═══════════════════════════════ */
+function renderChecklist(){
+  const pct=arr=>arr.length?Math.round(arr.filter(i=>i.done).length/arr.length*100):0;
+  const done=arr=>arr.filter(i=>i.done).length;
+  const rPct=pct(CK.checklist),rlPct=pct(CK.realizar),mPct=pct(CK.mejoras),oPct=pct(CK.operativas);
+  document.getElementById('ck-rut-val').textContent=rPct+'%';
+  document.getElementById('ck-rut-sub').textContent=done(CK.checklist)+'/'+CK.checklist.length+' completadas';
+  document.getElementById('ck-rut-bar').style.width=rPct+'%';
+  document.getElementById('ck-real-val').textContent=rlPct+'%';
+  document.getElementById('ck-real-sub').textContent=done(CK.realizar)+'/'+CK.realizar.length+' completadas';
+  document.getElementById('ck-real-bar').style.width=rlPct+'%';
+  document.getElementById('ck-mej-val').textContent=mPct+'%';
+  document.getElementById('ck-mej-sub').textContent=done(CK.mejoras)+'/'+CK.mejoras.length+' completadas';
+  document.getElementById('ck-mej-bar').style.width=mPct+'%';
+  document.getElementById('ck-op-val').textContent=oPct+'%';
+  document.getElementById('ck-op-sub').textContent=done(CK.operativas)+'/'+CK.operativas.length+' completadas';
+  document.getElementById('ck-op-bar').style.width=oPct+'%';
+  document.getElementById('ck-rut-list').innerHTML=
+    CK.checklist.slice(0,5).map(it=>`
+      <div class="donut-item">
+        <div class="donut-dot" style="background:${it.done?'var(--green)':'rgba(255,255,255,.2)'}"></div>
+        <span style="color:${it.done?'var(--text)':'var(--muted)'}${it.done?';text-decoration:line-through':''}">${it.name}</span>
+        <span style="margin-left:auto;font-size:.6rem;color:${it.done?'var(--green)':'var(--muted)'}">${it.done?'✓':'—'}</span>
+      </div>`).join('')+
+    `<div class="donut-item"><span style="color:var(--muted);font-size:.62rem">… y ${CK.checklist.length-5} tareas más</span></div>`;
+  const totalItems=CK.checklist.length+CK.realizar.length+CK.mejoras.length+CK.operativas.length;
+  const totalDone=done(CK.checklist)+done(CK.realizar)+done(CK.mejoras)+done(CK.operativas);
+  const genPct=Math.round(totalDone/totalItems*100);
+  document.getElementById('ck-general-val').textContent=genPct+'%';
+  document.getElementById('ck-general-sub').textContent=totalDone+' de '+totalItems+' tareas completadas (todas las categorías)';
+  document.getElementById('ck-gen-bar').style.width=genPct+'%';
+  document.getElementById('cierre-ck').textContent=genPct+'%';
+  globalData.ck=genPct;
+}
+renderChecklist();
+
+/* ═══════════════════════════════
+   OCUPACIÓN
+═══════════════════════════════ */
+function loadOcupacion(){
+  const old=document.getElementById('gviz-ocup'); if(old)old.remove();
+  window.__gvizOcupCallback=function(resp){
+    try{
+      if(!resp?.table?.rows?.length) throw new Error('Sin datos');
+      const rows=resp.table.rows.map(row=>{const c=row.c||[];const g=i=>(c[i]&&c[i].v!==null)?String(c[i].v).trim():'';return{loc:g(1),tipo:g(2),obs:g(4),ocup:g(5)};}).filter(r=>r.loc);
+      const total=rows.length,ocupadas=rows.filter(r=>r.ocup==='OCUPADA').length,nook=rows.filter(r=>r.obs==='NOOK').length;
+      const disponibles=rows.filter(r=>r.ocup==='VACIA'&&r.obs==='OK').length;
+      const nookOcup=rows.filter(r=>r.obs==='NOOK'&&r.ocup==='OCUPADA').length;
+      const pctOcup=(disponibles+ocupadas)>0?((ocupadas/(disponibles+ocupadas))*100).toFixed(1):'0.0';
+      const pctDisp=total>0?((disponibles/total)*100).toFixed(1):'0.0';
+      const picking=rows.filter(r=>r.tipo==='PICKING'),altura=rows.filter(r=>r.tipo==='ALTURA');
+      const pckPct=picking.length>0?((picking.filter(r=>r.ocup==='OCUPADA').length/picking.length)*100).toFixed(1):'0.0';
+      const altPct=altura.length>0?((altura.filter(r=>r.ocup==='OCUPADA').length/altura.length)*100).toFixed(1):'0.0';
+      document.getElementById('ocup-total').textContent=fmt(total);
+      document.getElementById('ocup-ocupadas').textContent=fmt(ocupadas);
+      document.getElementById('ocup-pct-sub').textContent=pctOcup+'% de ocupación';
+      document.getElementById('ocup-bar').style.width=pctOcup+'%';
+      document.getElementById('ocup-disponibles').textContent=fmt(disponibles);
+      document.getElementById('ocup-disp-pct').textContent=pctDisp+'% del total';
+      document.getElementById('ocup-nook').textContent=fmt(nook);
+      document.getElementById('ocup-pct').textContent=pctOcup+'%';
+      document.getElementById('pct-altura').textContent=altPct+'%';
+      document.getElementById('pct-picking').textContent=pckPct+'%';
+      document.getElementById('bar-altura').style.width=altPct+'%';
+      document.getElementById('bar-picking').style.width=pckPct+'%';
+      document.getElementById('ocup-nook-ocup-wrap').innerHTML=nookOcup>0
+        ?`<span style="color:var(--red);font-weight:700">⚠ ${nookOcup} NOOK ocupadas — revisar</span>`
+        :`<span style="color:var(--green)">✓ Sin NOOK ocupadas</span>`;
+      const t=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('ocup-updated').textContent='Actualizado '+t;
+      document.getElementById('p-ocupacion').textContent=pctOcup+'%';
+      document.getElementById('cierre-ocup').textContent=pctOcup+'%';
+      globalData.pctOcup=parseFloat(pctOcup);
+      setSrcDone('src-ocup'); onSourceLoaded();
+    }catch(e){console.error('Ocup:',e);setSrcErr('src-ocup');onSourceLoaded();}
+  };
+  const s=document.createElement('script'); s.id='gviz-ocup';
+  s.src=`https://docs.google.com/spreadsheets/d/${OCUP_ID}/gviz/tq?tq=select%20A%2CB%2CC%2CD%2CE%2CF&gid=${OCUP_GID}&tqx=out:json;responseHandler:__gvizOcupCallback&headers=1`;
+  s.onerror=()=>{setSrcErr('src-ocup');onSourceLoaded();};
+  document.head.appendChild(s);
+}
+
+/* ═══════════════════════════════
+   INVENTARIO CÍCLICO
+═══════════════════════════════ */
+function loadInventario(){
+  const old=document.getElementById('gviz-inv'); if(old)old.remove();
+  window.__gvizInvCallback=function(resp){
+    try{
+      if(!resp?.table?.rows?.length) throw new Error('Sin datos');
+      const cols=['Marca','LOC','SKU','Descrip','Logico','Fisico','Diferencia','correctas','Abs','FECHA','Colaborador','tipo loc'];
+      let rows=resp.table.rows.map(row=>{const r={};cols.forEach((n,i)=>{const c=row.c?row.c[i]:null;r[n]=c&&c.v!==null?String(c.v):'';r[n+'_f']=c&&c.f?String(c.f):'';});return r;}).filter(r=>r.SKU||r.Descrip);
+      
+      const tM = new Date().getMonth(); 
+      const tY = new Date().getFullYear();
+      rows = rows.filter(r => {
+         if(r.FECHA.startsWith('Date(')){
+            const m = r.FECHA.match(/Date\((\d+),\s*(\d+)/);
+            return m && parseInt(m[1])===tY && parseInt(m[2])===tM;
+         } else if(r.FECHA_f.includes('/')){
+            const pts = r.FECHA_f.split('/');
+            return pts.length>=3 && Math.abs(parseInt(pts[1])-1)===tM && parseInt(pts[2])===tY;
+         } else if(r.FECHA.includes('-')){
+            const pts = r.FECHA.split('-');
+            return pts.length>=3 && Math.abs(parseInt(pts[1])-1)===tM && parseInt(pts[0])===tY;
+         }
+         return false;
+      });
+
+      const difRows = rows.filter(r=>parseFloat(r.Diferencia)!==0&&r.Diferencia!=='');
+      
+      const total = rows.length;
+      const conDiff = difRows.length;
+      
+      // Exactitud con decimales y sin redondear al azar para más precisión
+      const exactitud = total ? parseFloat((((total-conDiff)/total)*100).toFixed(1)) : 0;
+      const errorPct = total ? (100 - exactitud).toFixed(1) : 0;
+      
+      const locsUnicas = new Set(rows.map(r=>r.LOC).filter(Boolean)).size;
+      const skusUnicos = new Set(rows.map(r=>r.SKU).filter(Boolean)).size;
+      
+      const locsConDiff = new Set(difRows.map(r=>r.LOC).filter(Boolean)).size;
+      const skusConDiff = new Set(difRows.map(r=>r.SKU).filter(Boolean)).size;
+      
+      const exactLoc = locsUnicas ? parseFloat((((locsUnicas-locsConDiff)/locsUnicas)*100).toFixed(1)) : 0;
+      const exactSku = skusUnicos ? parseFloat((((skusUnicos-skusConDiff)/skusUnicos)*100).toFixed(1)) : 0;
+
+      document.getElementById('inv-exactitud').textContent=total ? exactitud+'%' : '—';
+      document.getElementById('inv-total').textContent=fmt(total);
+      document.getElementById('inv-diff').textContent=fmt(conDiff);
+      document.getElementById('inv-error-pct').textContent=total ? errorPct+'% tasa de error' : 'Sin datos del mes';
+      document.getElementById('inv-skus').textContent=fmt(skusUnicos);
+      document.getElementById('inv-exact-bar').style.width=exactitud+'%';
+      const t=document.getElementById('inv-diff-trend');
+      t.textContent=errorPct+'% error'; t.className='kpi-trend '+(parseFloat(errorPct)>10?'down':parseFloat(errorPct)>5?'flat':'up');
+      
+      document.getElementById('obj-pos').textContent=total ? exactLoc+'%' : '—';
+      document.getElementById('obj-pos-bar').style.width=Math.min(exactLoc, 100)+'%';
+      document.getElementById('obj-sku').textContent=total ? exactSku+'%' : '—';
+      document.getElementById('obj-sku-bar').style.width=Math.min(exactSku, 100)+'%';
+
+      // ----------------------------------------------------
+      // METAS Y AVANCE DE COBERTURA
+      // ----------------------------------------------------
+      // Meta Posiciones (LOC) - 150 mensuales
+      const metaLocs = 150; 
+      const cobPosPct = metaLocs > 0 ? Math.round((locsUnicas / metaLocs) * 100) : 0;
+      
+      // Meta Unidades (aprox 1000/día -> ~20.000 a 22.000/mes)
+      // Extraemos la suma de las unidades contadas (columna Fisico)
+      const totalUnidades = rows.reduce((sum, r) => sum + (parseFloat(r.Fisico) || 0), 0);
+      const metaUnidades = 22000; // Tomo 22 días laborables x 1000 uds
+      const cobUdsPct = metaUnidades > 0 ? Math.round((totalUnidades / metaUnidades) * 100) : 0;
+      
+      // Render LOCs
+      document.getElementById('cob-pos').textContent = locsUnicas + ' / ' + metaLocs + ' (' + cobPosPct + '%)';
+      document.getElementById('cob-pos-bar').style.width = Math.min(cobPosPct, 100) + '%';
+      
+      // Render Unidades (reutilizo el id cob-sku para no romper html)
+      document.getElementById('cob-sku').textContent = fmt(Math.round(totalUnidades)) + ' / 22k (' + cobUdsPct + '%)';
+      document.getElementById('cob-sku-bar').style.width = Math.min(cobUdsPct, 100) + '%';
+      
+      const mD={};difRows.forEach(r=>{const m=(r.Marca||'Sin marca').trim();mD[m]=(mD[m]||0)+1;});
+      const top=Object.entries(mD).sort((a,b)=>b[1]-a[1]).slice(0,4);
+      const maxM=top[0]?.[1]||1;
+      const COLS=['var(--red)','var(--yellow)','var(--cyan)','var(--purple)'];
+      document.getElementById('inv-top-marcas').innerHTML=top.length>0
+        ?top.map(([m,n],i)=>`<div class="donut-item"><div class="donut-dot" style="background:${COLS[i]}"></div><span>${m}</span><div class="donut-bar"><div class="donut-bar-fill" style="width:${Math.round(n/maxM*100)}%;background:${COLS[i]}"></div></div><span class="donut-pct" style="color:${COLS[i]}">${n}</span></div>`).join('')
+        :'<div class="donut-item"><span style="color:var(--green)">✓ Sin discrepancias</span></div>';
+      const tt=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('inv-updated').textContent='Actualizado '+tt;
+      document.getElementById('p-exactitud').textContent=exactitud+'%';
+      document.getElementById('cierre-exact').textContent=exactitud+'%';
+      globalData.exactitud=exactitud; globalData.conDiff=conDiff;
+      setSrcDone('src-inv'); onSourceLoaded();
+    }catch(e){console.error('Inv:',e);setSrcErr('src-inv');onSourceLoaded();}
+  };
+  const s=document.createElement('script'); s.id='gviz-inv';
+  s.src=`https://docs.google.com/spreadsheets/d/${INV_ID}/gviz/tq?tq=select%20*&gid=${INV_GID}&tqx=out:json;responseHandler:__gvizInvCallback`;
+  s.onerror=()=>{setSrcErr('src-inv');onSourceLoaded();};
+  document.head.appendChild(s);
+}
+
+/* ═══════════════════════════════
+   STOCK GENERAL
+═══════════════════════════════ */
+function loadStock(){
+  const old=document.getElementById('gviz-stock'); if(old)old.remove();
+  window.__gvizStockCallback=function(resp){
+    try{
+      if(!resp?.table?.rows?.length) throw new Error('Sin datos');
+      const rows=resp.table.rows.map(row=>{const c=row.c||[];const g=i=>(c[i]&&c[i].v!==null)?String(c[i].v):'';return{loc:g(1).trim().toUpperCase(), sku:g(3),marca:g(13),cant:parseFloat(g(5))||0,disp:parseFloat(g(8))||0,estado:g(10).trim().toUpperCase(),rot:g(14).trim().toLowerCase()};});
+      let totalCant=0,totalDisp=0,totalHold=0,totalAjuste=0,totalScrap=0;
+      const marcas={},skus=new Set(),skusHold=new Set(),skusAjuste=new Set(),skusScrap=new Set();
+      let rotA=0,rotB=0,rotC=0,sinRot=0;
+      for(const r of rows){
+        totalCant+=r.cant; totalDisp+=r.disp; skus.add(r.sku);
+        if(r.estado==='HOLD') { totalHold+=r.cant; skusHold.add(r.sku); }
+        if(r.loc.includes('AJUSTE')) { totalAjuste+=r.cant; if(r.sku) skusAjuste.add(r.sku); }
+        if(r.loc.includes('SCRAP')) { totalScrap+=r.cant; if(r.sku) skusScrap.add(r.sku); }
+        
+        const m=r.marca.trim()||'Sin marca';
+        if(!marcas[m])marcas[m]=0; marcas[m]+=r.cant;
+        if(r.rot==='a')rotA+=r.cant;
+        else if(r.rot==='b')rotB+=r.cant;
+        else if(r.rot==='c')rotC+=r.cant;
+        else sinRot+=r.cant;
+      }
+      const holdPct=totalCant>0?((totalHold/totalCant)*100).toFixed(1):'0.0';
+      const dispPct=totalCant>0?((totalDisp/totalCant)*100).toFixed(1):'0.0';
+      const marcasArr=Object.entries(marcas).sort((a,b)=>b[1]-a[1]);
+      const marcasCount=marcasArr.length;
+
+      document.getElementById('stk-total').textContent=fmt(Math.round(totalCant));
+      document.getElementById('stk-disp').textContent=fmt(Math.round(totalDisp));
+      document.getElementById('stk-disp-pct').textContent=dispPct+'% del total';
+      document.getElementById('stk-disp-bar').style.width=dispPct+'%';
+      document.getElementById('stk-hold').textContent=fmt(Math.round(totalHold));
+      document.getElementById('stk-hold-pct').textContent=holdPct+'% del total';
+      const holdT=document.getElementById('stk-hold-trend');
+      holdT.textContent=parseFloat(holdPct)>5?'▼ Requiere atención':'✓ Bajo control';
+      holdT.className='kpi-trend '+(parseFloat(holdPct)>5?'down':'up');
+      document.getElementById('stk-skus').textContent=fmt(skus.size);
+      document.getElementById('stk-marcas-sub').textContent=marcasCount+' marcas activas';
+
+      const ajustePct=totalCant>0?((totalAjuste/totalCant)*100).toFixed(1):'0.0';
+      const scrapPct=totalCant>0?((totalScrap/totalCant)*100).toFixed(1):'0.0';
+      document.getElementById('stk-ajuste').textContent=fmt(Math.round(totalAjuste));
+      document.getElementById('stk-ajuste-pct').textContent=ajustePct+'% del total — '+skusAjuste.size+' SKUs';
+      document.getElementById('stk-scrap').textContent=fmt(Math.round(totalScrap));
+      document.getElementById('stk-scrap-pct').textContent=scrapPct+'% del total — '+skusScrap.size+' SKUs';
+
+      // Rotación
+      const rotTotal=rotA+rotB+rotC+sinRot||1;
+      const RCOLS=['var(--green)','var(--blue-lt)','var(--yellow)','var(--muted)'];
+      const RLBLS=['A — Alta rotación','B — Media rotación','C — Baja rotación','Sin rotación'];
+      const RVALS=[rotA,rotB,rotC,sinRot];
+      document.getElementById('stk-rotacion').innerHTML=RVALS.map((v,i)=>`
+        <div class="donut-item">
+          <div class="donut-dot" style="background:${RCOLS[i]}"></div>
+          <span style="color:${RCOLS[i]}">${RLBLS[i]}</span>
+          <div class="donut-bar"><div class="donut-bar-fill" style="width:${Math.round(v/rotTotal*100)}%;background:${RCOLS[i]}"></div></div>
+          <span class="donut-pct" style="color:${RCOLS[i]}">${((v/rotTotal)*100).toFixed(0)}%</span>
+        </div>`).join('');
+
+      // Top marcas
+      const top5=marcasArr.slice(0,4);const maxM=top5[0]?.[1]||1;
+      const MCOLS=['var(--orange)','var(--blue-lt)','var(--green)','var(--purple)'];
+      document.getElementById('stk-top-marcas').innerHTML=top5.map(([m,v],i)=>`
+        <div class="donut-item">
+          <div class="donut-dot" style="background:${MCOLS[i]}"></div>
+          <span>${m}</span>
+          <div class="donut-bar"><div class="donut-bar-fill" style="width:${Math.round(v/maxM*100)}%;background:${MCOLS[i]}"></div></div>
+          <span class="donut-pct" style="color:${MCOLS[i]}">${fmt(Math.round(v))}</span>
+        </div>`).join('');
+
+      const ts=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('stock-updated').textContent='Actualizado '+ts;
+      document.getElementById('p-unidades').textContent=fmt(Math.round(totalCant));
+      document.getElementById('p-skus').textContent=fmt(skus.size);
+      document.getElementById('cierre-unidades').textContent=fmt(Math.round(totalCant));
+      document.getElementById('cierre-hold').textContent=holdPct+'%';
+      document.getElementById('stk-hold-skus').textContent=fmt(skusHold.size);
+      globalData.stock={totalCant,totalHold,holdPct,skus:skus.size,skusHold:skusHold.size,marcasCount};
+      setSrcDone('src-stock'); onSourceLoaded();
+    }catch(e){console.error('Stock:',e);setSrcErr('src-stock');onSourceLoaded();}
+  };
+  const s=document.createElement('script'); s.id='gviz-stock';
+  s.src=`https://docs.google.com/spreadsheets/d/${STOCK_ID}/gviz/tq?tq=select%20*&gid=${STOCK_GID}&tqx=out:json;responseHandler:__gvizStockCallback`;
+  s.onerror=()=>{setSrcErr('src-stock');onSourceLoaded();};
+  document.head.appendChild(s);
+}
+
+/* ═══════════════════════════════
+   ROTACIÓN
+═══════════════════════════════ */
+function loadRotacion(){
+  const old=document.getElementById('gviz-rot'); if(old)old.remove();
+  window.__gvizRotCallback=function(resp){
+    try{
+      if(!resp?.table?.rows?.length) throw new Error('Sin datos');
+      const rows=resp.table.rows;
+      const getVal=(k,c=1)=>{const r=rows.find(x=>x.c&&x.c[0]&&x.c[0].v===k);return r&&r.c&&r.c[c]?(r.c[c].f||r.c[c].v):'—';};
+      const getRow=(idx,c)=>{const r=rows[idx]; return r&&r.c&&r.c[c]?(r.c[c].f||r.c[c].v):'—';};
+      
+      const pctPiso=getVal('kpi_tipoA_pct_piso');
+      document.getElementById('rot-piso-pct').textContent=pctPiso;
+      document.getElementById('rot-alt-uds').textContent=fmt(getVal('tipoA_unidades_altura'));
+      document.getElementById('rot-alt-skus').textContent=fmt(getVal('tipoA_skus_altura'));
+      document.getElementById('rot-criticos').textContent=fmt(getVal('tipoA_skus_criticos_100pct'))+' críticos (100% en altura)';
+      
+      document.getElementById('rot-sr-piso-uds').textContent=fmt(getVal('sr_unidades_piso'));
+      document.getElementById('rot-sr-piso-skus').textContent=fmt(getVal('sr_skus_piso'));
+      
+      document.getElementById('rot-a-sku').textContent=fmt(getRow(5,1));
+      document.getElementById('rot-a-uds').textContent=fmt(getRow(5,3))+' uds';
+      document.getElementById('rot-a-bar').style.width=parseFloat(getRow(5,2))+'%';
+      
+      document.getElementById('rot-sr-sku').textContent=fmt(getRow(8,1));
+      document.getElementById('rot-sr-uds').textContent=fmt(getRow(8,3))+' uds';
+      document.getElementById('rot-sr-bar').style.width=parseFloat(getRow(8,2))+'%';
+
+      const tsObj = getVal('ultima_actualizacion');
+      document.getElementById('rot-updated').textContent='Actualizado '+String(tsObj).substring(0,25);
+      
+      setSrcDone('src-rot'); onSourceLoaded();
+    }catch(e){console.error('Rot:',e);setSrcErr('src-rot');onSourceLoaded();}
+  };
+  const s=document.createElement('script'); s.id='gviz-rot';
+  s.src=`https://docs.google.com/spreadsheets/d/${ROT_ID}/gviz/tq?tq=select%20*&sheet=${ROT_TAB}&tqx=out:json;responseHandler:__gvizRotCallback`;
+  s.onerror=()=>{setSrcErr('src-rot');onSourceLoaded();};
+  document.head.appendChild(s);
+}
+
+/* ═══════════════════════════════
+   BLOQUEADOS
+═══════════════════════════════ */
+function cleanNum(str){
+  if(!str) return 0;
+  const cl = str.replace(/[^\d,\-]/g, '').replace(',', '.');
+  return parseFloat(cl) || 0;
+}
+
+function loadBloqueados(){
+  const old1=document.getElementById('gviz-bloq'); if(old1)old1.remove();
+  const old2=document.getElementById('gviz-desbloq'); if(old2)old2.remove();
+  const old3=document.getElementById('gviz-hist-resumen'); if(old3)old3.remove();
+  let bloqData=null, desbloqData=null, histData=null;
+  let loaded=0;
+
+  function tryFinish(){
+    loaded++;
+    if(loaded<3) return;
+    try{
+      const bSkus = bloqData ? bloqData.length : 0;
+      const bQty = bloqData ? bloqData.reduce((s,r)=>s+r.qty,0) : 0;
+      const dSkus = desbloqData ? desbloqData.length : 0;
+      const dQty = desbloqData ? desbloqData.reduce((s,r)=>s+r.qty,0) : 0;
+
+      document.getElementById('bloq-skus').textContent = fmt(bSkus);
+      document.getElementById('bloq-skus-sub').textContent = bSkus+' códigos en riesgo';
+      document.getElementById('bloq-qty').textContent = fmt(bQty);
+      document.getElementById('bloq-desbloq-skus').textContent = fmt(dSkus);
+      document.getElementById('bloq-desbloq-sub').textContent = dSkus+' códigos liberados';
+      document.getElementById('bloq-desbloq-qty').textContent = fmt(dQty);
+
+      /* Evolución Histórica */
+      const hSkus = histData ? histData.length : 0;
+      const hQty = histData ? histData.reduce((s,r)=>s+r.qty,0) : 0;
+      const diffSkus = bSkus - hSkus;
+      const diffQty = bQty - hQty;
+
+      document.getElementById('bloq-hist-sku').textContent = hSkus+' → '+bSkus;
+      const skuEl = document.getElementById('bloq-hist-sku-sub');
+      if(diffSkus<0) skuEl.innerHTML = '<span style="color:var(--ok);font-weight:700">'+diffSkus+' SKUs</span> (mejoró)';
+      else if(diffSkus>0) skuEl.innerHTML = '<span style="color:var(--error);font-weight:700">+'+diffSkus+' SKUs</span> (empeoró)';
+      else skuEl.textContent = 'Sin variación';
+
+      document.getElementById('bloq-hist-qty').textContent = fmt(hQty)+' → '+fmt(bQty);
+      const qtyEl = document.getElementById('bloq-hist-qty-sub');
+      if(diffQty<0) qtyEl.innerHTML = '<span style="color:var(--ok);font-weight:700">'+fmt(diffQty)+' unds</span> (mejoró)';
+      else if(diffQty>0) qtyEl.innerHTML = '<span style="color:var(--error);font-weight:700">+'+fmt(diffQty)+' unds</span> (empeoró)';
+      else qtyEl.textContent = 'Sin variación';
+
+      /* Estado de Gestión */
+      const mapH = new Map();
+      if(histData) histData.forEach(r=>mapH.set(r.sku, r));
+      const mapC = new Map();
+      if(bloqData) bloqData.forEach(r=>mapC.set(r.sku, r));
+      let resueltos=0, nuevos=0, parciales=0, agravados=0;
+      mapH.forEach((h,sku)=>{const c=mapC.get(sku);if(!c)resueltos++;else{const d=c.qty-h.qty;if(d<0)parciales++;else if(d>0)agravados++;}});
+      mapC.forEach((c,sku)=>{if(!mapH.has(sku))nuevos++;});
+
+      const GCOLS=['var(--ok)','#34d399','var(--error)','#f87171'];
+      const GLBLS=['Resueltos 100%','Descontando','Nuevos Bloqueos','Agravados'];
+      const GVALS=[resueltos, parciales, nuevos, agravados];
+      const gMax = Math.max(...GVALS,1);
+      document.getElementById('bloq-gestion').innerHTML = GVALS.map((v,i)=>
+        '<div class="donut-item"><div class="donut-dot" style="background:'+GCOLS[i]+'"></div><span>'+GLBLS[i]+'</span><div class="donut-bar"><div class="donut-bar-fill" style="width:'+Math.round(v/gMax*100)+'%;background:'+GCOLS[i]+'"></div></div><span class="donut-pct" style="color:'+GCOLS[i]+'">'+v+'</span></div>'
+      ).join('');
+
+      const ts=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('bloq-updated').textContent='Actualizado '+ts;
+
+      /* Feed cierre */
+      document.getElementById('cierre-hold').textContent = fmt(bQty)+' unds';
+      globalData.bloq = {bSkus, bQty, dSkus, dQty, resueltos, nuevos};
+
+      setSrcDone('src-bloq'); onSourceLoaded();
+    }catch(e){console.error('Bloq render:',e); setSrcErr('src-bloq'); onSourceLoaded();}
+  }
+
+  // Fetch Bloqueados (gid=0)
+  window.__gvizBloqResumenCb = function(resp){
+    try{
+      if(!resp?.table?.rows?.length) throw new Error('Sin datos bloq');
+      bloqData = resp.table.rows.map(row=>{const c=row.c||[];const g=i=>(c[i]&&c[i].v!==null)?String(c[i].v).trim():'';return{sku:g(0),desc:g(1),qty:cleanNum(g(2))};}).filter(r=>r.sku);
+    }catch(e){console.warn('Bloq fetch:',e); bloqData=[];}
+    tryFinish();
+  };
+  const s1=document.createElement('script'); s1.id='gviz-bloq';
+  s1.src='https://docs.google.com/spreadsheets/d/'+BLOQ_SHEET_ID+'/gviz/tq?tq=select%20*&gid=0&tqx=out:json;responseHandler:__gvizBloqResumenCb&headers=1';
+  s1.onerror=()=>{bloqData=[];tryFinish();};
+  document.head.appendChild(s1);
+
+  // Fetch Desbloqueados (gid=1965881417)
+  window.__gvizDesbloqResumenCb = function(resp){
+    try{
+      if(!resp?.table?.rows?.length) throw new Error('Sin datos desbloq');
+      desbloqData = resp.table.rows.map(row=>{const c=row.c||[];const g=i=>(c[i]&&c[i].v!==null)?String(c[i].v).trim():'';return{sku:g(0),desc:g(1),qty:cleanNum(g(2))};}).filter(r=>r.sku);
+    }catch(e){console.warn('Desbloq fetch:',e); desbloqData=[];}
+    tryFinish();
+  };
+  const s2=document.createElement('script'); s2.id='gviz-desbloq';
+  s2.src='https://docs.google.com/spreadsheets/d/'+BLOQ_SHEET_ID+'/gviz/tq?tq=select%20*&gid=1965881417&tqx=out:json;responseHandler:__gvizDesbloqResumenCb&headers=1';
+  s2.onerror=()=>{desbloqData=[];tryFinish();};
+  document.head.appendChild(s2);
+
+  // Fetch Historico Mayo (gid=2093106929)
+  window.__gvizHistResumenCb = function(resp){
+    try{
+      if(!resp?.table?.rows?.length) throw new Error('Sin datos hist');
+      histData = resp.table.rows.map(row=>{const c=row.c||[];const g=i=>(c[i]&&c[i].v!==null)?String(c[i].v).trim():'';return{sku:g(0),desc:g(1),qty:cleanNum(g(2))};}).filter(r=>r.sku);
+    }catch(e){console.warn('Hist fetch:',e); histData=[];}
+    tryFinish();
+  };
+  const s3=document.createElement('script'); s3.id='gviz-hist-resumen';
+  s3.src='https://docs.google.com/spreadsheets/d/'+BLOQ_SHEET_ID+'/gviz/tq?tq=select%20*&gid=2093106929&tqx=out:json;responseHandler:__gvizHistResumenCb&headers=1';
+  s3.onerror=()=>{histData=[];tryFinish();};
+  document.head.appendChild(s3);
+}
+
+/* ═══════════════════════════════
+   LOADING ORCHESTRATION
+═══════════════════════════════ */
+function setSrcDone(id){const el=document.getElementById(id);if(el){el.className='src-badge done';el.textContent='✓ '+el.textContent.replace(/^[⏳✓✗] /,'');}}
+function setSrcErr(id){const el=document.getElementById(id);if(el){el.className='src-badge err';el.textContent='✗ '+el.textContent.replace(/^[⏳✓✗] /,'');}}
+
+function onSourceLoaded(){
+  sourcesLoaded++;
+  const pct=Math.round(sourcesLoaded/TOTAL_SOURCES*100);
+  document.getElementById('loading-msg').textContent=`Cargando datos… ${sourcesLoaded}/${TOTAL_SOURCES} fuentes`;
+  if(sourcesLoaded>=TOTAL_SOURCES){
+    document.getElementById('loading-overlay').classList.add('hidden');
+    updateStatusBar();
+    updateCierreSlide();
+
+    // Mostrar porcentaje de stock general en Bloqueados
+    if(globalData.stock && globalData.bloq){
+      const sSkus = globalData.stock.skus || 1;
+      const sUds = globalData.stock.totalCant || 1;
+      const pctS = ((globalData.bloq.bSkus / sSkus) * 100).toFixed(1);
+      const pctQ = ((globalData.bloq.bQty / sUds) * 100).toFixed(1);
+      const subSkus = document.getElementById('bloq-skus-sub');
+      const subQty = document.getElementById('bloq-qty-sub');
+      if(subSkus) subSkus.innerHTML = globalData.bloq.bSkus + ' códigos en riesgo (<span style="font-weight:700;color:var(--text)">' + pctS + '%</span> del total)';
+      if(subQty) subQty.innerHTML = 'volumen inmovilizado (<span style="font-weight:700;color:var(--text)">' + pctQ + '%</span> del total)';
+
+      const holdEval = document.getElementById('stk-hold-eval-sub');
+      if(holdEval && globalData.stock.skusHold){
+         const evaluados = globalData.bloq.bSkus;
+         const totHold = globalData.stock.skusHold;
+         const evalPct = totHold > 0 ? ((evaluados / totHold) * 100).toFixed(0) : 0;
+         holdEval.innerHTML = `<span style="color:var(--text);font-weight:700">${fmt(evaluados)}</span> ya informados al cliente (<span style="color:var(--text);font-weight:700">${evalPct}%</span>).`;
+      }
+    }
+
+    playing=true;
+    startTimer();
+  }
+}
+
+function updateStatusBar(){
+  const el=document.getElementById('data-status');
+  const errors=document.querySelectorAll('.src-badge.err').length;
+  if(errors===0){el.textContent='✓ Todos los datos en vivo';el.className='tb-status ok';}
+  else if(errors<TOTAL_SOURCES){el.textContent='⚠ '+errors+' fuente(s) con error';el.className='tb-status partial';}
+  else{el.textContent='✗ Error de conexión';el.className='tb-status err';}
+}
+
+function updateCierreSlide(){
+  const exact=globalData.exactitud??0, ocup=globalData.pctOcup??0;
+  const holdPct=parseFloat(globalData.stock?.holdPct??0);
+  let estado='Favorable',desc='Los indicadores principales se encuentran dentro de los parámetros operativos.';
+  let gradStyle='linear-gradient(135deg,var(--green),var(--cyan))';
+  if(exact<90||ocup>97||holdPct>10){
+    estado='Con Alertas';
+    desc='Hay indicadores que requieren atención: exactitud de inventario, ocupación crítica o stock en HOLD.';
+    gradStyle='linear-gradient(135deg,var(--yellow),var(--red))';
+  } else if(exact>=95&&ocup<95&&holdPct<5){
+    estado='Óptimo';
+    desc='Los indicadores principales superan los objetivos establecidos. Excelente gestión operativa del depósito.';
+    gradStyle='linear-gradient(135deg,#10b981,#06b6d4)';
+  }
+  const el=document.getElementById('cierre-estado');
+  el.textContent=estado; el.style.background=gradStyle;
+  el.style.webkitBackgroundClip='text'; el.style.webkitTextFillColor='transparent';
+  document.getElementById('cierre-desc').textContent=desc;
+}
+
+/* ═══════════════════════════════
+   NAVIGATION
+═══════════════════════════════ */
+const btnPrev=document.getElementById('btn-prev'),btnNext=document.getElementById('btn-next'),btnPlay=document.getElementById('btn-play');
+const counter=document.getElementById('slide-counter'),arc=document.getElementById('timer-arc'),timerLbl=document.getElementById('timer-label');
+const dotsWrap=document.getElementById('dots-wrap'),CIRCUM=2*Math.PI*15;
+
+for(let i=0;i<N;i++){
+  const d=document.createElement('div');d.className='dot';
+  d.onclick=()=>{pauseTimer();goTo(i);if(playing)startTimer();};
+  dotsWrap.appendChild(d);
+}
+function updateDots(){dotsWrap.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===current));}
+
+function goTo(idx){
+  if(idx<0||idx>=N)return;
+  slides[current].classList.remove('active');slides[current].classList.add('exit');
+  const old=current;current=idx;
+  setTimeout(()=>slides[old].classList.remove('exit'),550);
+  slides[current].classList.add('active');
+  counter.textContent=(current+1)+' / '+N;
+  btnPrev.disabled=current===0; btnNext.disabled=current===N-1;
+  updateDots();
+}
+
+btnPrev.onclick=()=>{pauseTimer();goTo(current-1);if(playing)startTimer();};
+btnNext.onclick=()=>{pauseTimer();goTo(current+1);if(playing)startTimer();};
+btnPlay.onclick=()=>{
+  playing=!playing;
+  btnPlay.textContent=playing?'⏸ Pausar':'▶ Reanudar';
+  btnPlay.classList.toggle('primary',playing);
+  if(playing)startTimer();else pauseTimer();
+};
+
+function startTimer(){
+  clearTimeout(timer);cancelAnimationFrame(rafId);
+  timerStart=performance.now();animLoop(timerStart);
+  timer=setTimeout(()=>{goTo(current===N-1?0:current+1);startTimer();},SLIDE_DURATION);
+}
+function pauseTimer(){clearTimeout(timer);cancelAnimationFrame(rafId);}
+
+function animLoop(startTs){
+  rafId=requestAnimationFrame(ts=>{
+    const elapsed=ts-startTs,prog=Math.min(elapsed/SLIDE_DURATION,1);
+    timerLbl.textContent=Math.ceil((SLIDE_DURATION-elapsed)/1000)>0?Math.ceil((SLIDE_DURATION-elapsed)/1000):'';
+    arc.style.strokeDashoffset=CIRCUM*prog;
+    document.getElementById('progress-fill').style.width=(prog*100)+'%';
+    if(prog<1)animLoop(startTs);
+  });
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '){pauseTimer();goTo(current+1);if(playing)startTimer();}
+  if(e.key==='ArrowLeft'){pauseTimer();goTo(current-1);if(playing)startTimer();}
+  if(e.key==='Escape')window.close();
+  if(e.key.toLowerCase()==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();}
+});
+document.addEventListener('dblclick',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();});
+
+/* ═══════════════════════════════
+   INIT
+═══════════════════════════════ */
+updateDots(); counter.textContent='1 / '+N; btnPrev.disabled=true;
+loadOcupacion(); loadInventario(); loadStock(); loadRotacion(); loadBloqueados();
+setInterval(()=>{ sourcesLoaded=0; loadOcupacion(); loadInventario(); loadStock(); loadRotacion(); loadBloqueados(); },5*60*1000);
+</script>
+</body>
+</html>
