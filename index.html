@@ -131,15 +131,15 @@
   <div class="hero-sub">Todos los dashboards operativos en un solo lugar. Seleccioná el módulo que querés visualizar.</div>
   <div class="hero-stats">
     <div class="hero-stat">
-      <div class="hero-stat-val">8</div>
+      <div class="hero-stat-val">10</div>
       <div class="hero-stat-label">Módulos disponibles</div>
     </div>
     <div class="hero-stat">
-      <div class="hero-stat-val">7</div>
+      <div class="hero-stat-val">9</div>
       <div class="hero-stat-label">En vivo</div>
     </div>
     <div class="hero-stat">
-      <div class="hero-stat-val">2</div>
+      <div class="hero-stat-val">1</div>
       <div class="hero-stat-label">En desarrollo</div>
     </div>
   </div>
@@ -293,6 +293,41 @@
       </div>
     </a>
 
+    <!-- NUEVOS MÓDULOS AGREGADOS -->
+    <a class="dash-card" href="resumen-ejecutivo.html">
+      <div class="dash-card-header">
+        <div class="dash-icon" style="background:#f3f4f6">👔</div>
+        <span class="status-badge status-live">● En vivo</span>
+      </div>
+      <div class="dash-card-body">
+        <div class="dash-card-title">Resumen Ejecutivo</div>
+        <div class="dash-card-desc">Visión de alto nivel de los KPIs críticos de la operación. Ocupación, exactitud, stock y checklists en una presentación ejecutiva.</div>
+        <div class="dash-tags">
+          <span class="dash-tag">KPIs</span>
+          <span class="dash-tag">Gerencial</span>
+          <span class="dash-tag">Resumen</span>
+        </div>
+        <span class="dash-btn">Abrir dashboard →</span>
+      </div>
+    </a>
+
+    <a class="dash-card" href="dashboard_logistico_mejorado2.html">
+      <div class="dash-card-header">
+        <div class="dash-icon" style="background:#ecfdf5">🚀</div>
+        <span class="status-badge status-live">● En vivo</span>
+      </div>
+      <div class="dash-card-body">
+        <div class="dash-card-title">Ocupación Avanzada</div>
+        <div class="dash-card-desc">Dashboard mejorado de ocupación con análisis por pasillo, heatmap, alertas de saturación y procesamiento de archivos Excel.</div>
+        <div class="dash-tags">
+          <span class="dash-tag">Heatmap</span>
+          <span class="dash-tag">WMS</span>
+          <span class="dash-tag">Pasillos</span>
+        </div>
+        <span class="dash-btn">Abrir dashboard →</span>
+      </div>
+    </a>
+
   </div>
 </div>
 
@@ -326,34 +361,29 @@
   const logoutBtn = document.getElementById('logoutBtn');
 
   if (!isAuthenticated) {
-    // Si no está autenticado, mostrar el candado
     modal.style.display = 'flex';
     if(logoutBtn) logoutBtn.style.display = 'none';
   } else {
-    // Si está autenticado, ocultar modal y mostrar botón de salir
     modal.style.display = 'none';
     if(logoutBtn) logoutBtn.style.display = 'block';
     
-    // Si es invitado, aplicar el escudo anti-curiosos
     if (isGuest) {
       Security.applyProtections();
     }
   }
 
-  // Función global para validar el acceso
   window.checkAuth = async function() {
     const pass = document.getElementById('accessPass').value;
     const role = await Security.validate(pass);
     
     if (role) {
       sessionStorage.setItem('user_role', role);
-      location.reload(); // Recargamos para aplicar los cambios de rol
+      location.reload();
     } else {
       alert('🚫 Contraseña incorrecta. Acceso denegado.');
     }
   };
 
-  // Fecha
   const ahora = new Date();
   const opts = {weekday:'long',year:'numeric',month:'long',day:'numeric'};
   const fStr = ahora.toLocaleDateString('es-AR', opts);
