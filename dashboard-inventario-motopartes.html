@@ -167,6 +167,32 @@
     .search-input{width:100%;}
     table{font-size:9px;}
   }
+
+  .senior-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-family:var(--font-body);font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all 0.2s;white-space:nowrap;display:flex;align-items:center;gap:6px;}
+  .senior-btn:hover,.senior-btn.active{background:#eff6ff;border-color:var(--accent);color:var(--accent);}
+  .senior-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .senior-section{display:none;}
+  .senior-section.visible{display:block;animation:fadeUp 0.4s ease both;}
+  .dashboard-section{display:block;}
+  .dashboard-section.hidden{display:none;}
+  .report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:20px;}
+  .report-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+  .report-card-title{font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+  .report-kpi{font-family:var(--font-display);font-size:32px;font-weight:900;line-height:1;}
+  .report-kpi-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .report-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .report-table th{font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:2px solid var(--border);}
+  .report-table td{padding:8px 6px;border-bottom:1px solid var(--border);}
+  .report-table tr:hover{background:#f0f5ff;}
+  .report-table .num{font-family:var(--font-display);font-weight:700;text-align:right;}
+  .report-table .green{color:var(--green);}
+  .report-table .red{color:var(--red);}
+  .report-table .yellow{color:#d97706;}
+  .report-section-title{font-family:var(--font-display);font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text);margin:24px 0 14px 0;padding-bottom:6px;border-bottom:2px solid var(--accent);}
+  .report-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;text-transform:uppercase;}
+  .report-badge-ok{background:rgba(34,197,94,0.15);color:var(--green);}
+  .report-badge-warn{background:rgba(234,179,8,0.15);color:var(--yellow);}
+  .report-badge-fail{background:rgba(239,68,68,0.15);color:var(--red);}
 </style>
 </head>
 <body>
@@ -209,12 +235,14 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:12px;color:#6b7280;font-weight:600;">Mes:</span>
-          <select id="monthFilters" onchange="mesActivo=this.value;renderDashboard(getDatosFiltrados())" style="background:#f0f2f5;border:1px solid #e2e6ea;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;">
+          <select id="monthFilters" onchange="mesActivo=this.value;renderDashboard(getDatosFiltrados());if(vistaSenior)renderInformeSenior(getDatosFiltrados())" style="background:#f0f2f5;border:1px solid #e2e6ea;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;">
             <option value="todos">Todos</option>
           </select>
         </div>
+        <button class="senior-btn" id="seniorToggle" onclick="toggleSenior()">📊 Informe Senior</button>
       </div>
     </div>
+    <div class="dashboard-section" id="dashboardSection">
     <div class="kpi-grid" style="grid-template-columns:repeat(6,1fr)">
       <div class="kpi-card orange">
         <div class="kpi-label">Total SKUs únicos</div>
@@ -540,7 +568,73 @@
     <div id="proyeccionList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px"></div>
   </div>
 
+</div><!-- /dashboardSection -->
+
+<!-- INFORME SENIOR -->
+<div class="senior-section" id="seniorSection">
+
+  <div class="report-section-title">Resumen Ejecutivo</div>
+  <div class="report-grid" id="seniorResumen"></div>
+
+  <div class="report-section-title">Evolución Mensual</div>
+  <div class="card" style="overflow-x:auto;padding:18px">
+    <table class="report-table" id="seniorEvolucion">
+      <thead>
+        <tr>
+          <th>Mes</th>
+          <th>Registros</th>
+          <th>Correctos</th>
+          <th>Exact. Posiciones</th>
+          <th>Exact. Unidades</th>
+          <th>LOC únicas</th>
+          <th>Uds contadas</th>
+          <th>Dif. total uds</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="report-section-title">Performance por Colaborador</div>
+  <div class="card" style="overflow-x:auto;padding:18px">
+    <table class="report-table" id="seniorColabs">
+      <thead>
+        <tr>
+          <th>Colaborador</th>
+          <th>Registros</th>
+          <th>Correctos</th>
+          <th>Exactitud</th>
+          <th>Uds contadas</th>
+          <th>Uds correctas</th>
+          <th>Exact. Unidades</th>
+          <th>LOC únicas</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="report-section-title">Marcas Críticas</div>
+  <div class="card" style="overflow-x:auto;padding:18px">
+    <table class="report-table" id="seniorMarcas">
+      <thead>
+        <tr>
+          <th>Marca</th>
+          <th>Registros</th>
+          <th>Incorrectos</th>
+          <th>% Error</th>
+          <th>Uds totales</th>
+          <th>Uds incorrectas</th>
+          <th>Dif. neta uds</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
 </div>
+
+</div><!-- /mainContent -->
 
 <div class="footer">MotoPartes · Inventario en tiempo real desde Google Sheets · <span id="footerFecha">—</span></div>
 
@@ -555,6 +649,7 @@ let mesActivo = 'todos';
 let marcaActiva = null;
 let loadTimeout = null;
 let paginaActual = 1;
+let vistaSenior = false;
 const FILAS_POR_PAG = 100;
 const CONFIG_GID = '1085149671';
 
@@ -592,14 +687,14 @@ function renderYearFilters(datos) {
   const btnTodos = document.createElement('button');
   btnTodos.textContent = 'Todos';
   btnTodos.className = 'year-btn' + (anioActivo === 'todos' ? ' active' : '');
-  btnTodos.onclick = () => { anioActivo = 'todos'; renderYearFilters(datos); renderDashboard(getDatosFiltrados()); };
+  btnTodos.onclick = () => { anioActivo = 'todos'; renderYearFilters(datos); renderDashboard(getDatosFiltrados()); if(vistaSenior)renderInformeSenior(getDatosFiltrados()); };
   container.appendChild(btnTodos);
 
   anios.forEach(a => {
     const btn = document.createElement('button');
     btn.textContent = a;
     btn.className = 'year-btn' + (anioActivo === a ? ' active' : '');
-    btn.onclick = () => { anioActivo = a; mesActivo = 'todos'; renderYearFilters(datos); renderMonthFilters(datos); renderDashboard(getDatosFiltrados()); };
+    btn.onclick = () => { anioActivo = a; mesActivo = 'todos'; renderYearFilters(datos); renderMonthFilters(datos); renderDashboard(getDatosFiltrados()); if(vistaSenior)renderInformeSenior(getDatosFiltrados()); };
     container.appendChild(btn);
   });
 }
@@ -685,6 +780,7 @@ function cargarInventario() {
       renderYearFilters(todosLosDatos);
       renderMonthFilters(todosLosDatos);
       renderDashboard(todosLosDatos);
+      if(vistaSenior) renderInformeSenior(getDatosFiltrados());
       document.getElementById('statusDot').style.background = 'var(--green)';
       document.getElementById('statusText').textContent = 'Datos en vivo';
       const fStr = new Date().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -720,6 +816,14 @@ const COLORS = ['#1a56db','#057a55','#d97706','#c81e1e','#6c2bd9','#0891b2','#db
 function normalizar(str) {
   if (!str) return 'Sin datos';
   return str.trim().toLowerCase().replace(/^\w/, c => c.toUpperCase());
+}
+
+function toggleSenior() {
+  vistaSenior = !vistaSenior;
+  document.getElementById('seniorToggle').classList.toggle('active');
+  document.getElementById('dashboardSection').classList.toggle('hidden');
+  document.getElementById('seniorSection').classList.toggle('visible');
+  if (vistaSenior) renderInformeSenior(getDatosFiltrados());
 }
 
 function renderDashboard(datos) {
@@ -1216,6 +1320,142 @@ function renderDashboard(datos) {
         <div style="width:${pct||0}%;height:100%;background:${color};border-radius:4px;transition:width 1.4s ease"></div>
       </div>
     </div>`;
+  }).join('');
+}
+
+function renderInformeSenior(datos) {
+  // --- Resumen Ejecutivo ---
+  const totalReg = datos.length;
+  const correctos = datos.filter(r => num(r['Diferencia']) === 0).length;
+  const totalFis = datos.reduce((s,r) => s + num(r['Fisico']), 0);
+  const udsCorr = datos.filter(r => num(r['Diferencia']) === 0).reduce((s,r) => s + num(r['Fisico']), 0);
+  const pctPos = totalReg > 0 ? Math.round(correctos / totalReg * 1000) / 10 : 0;
+  const pctUds = totalFis > 0 ? Math.round(udsCorr / totalFis * 1000) / 10 : 0;
+  const locUnicas = new Set(datos.map(r => (r['LOC']||'').trim().toUpperCase()).filter(Boolean)).size;
+  const skusUnicos = new Set(datos.map(r => r.SKU).filter(Boolean)).size;
+  const totalDiffUds = datos.reduce((s,r) => s + Math.abs(num(r['Diferencia'])), 0);
+
+  const resumen = [
+    {label:'Exactitud Posiciones', valor:pctPos + '%', color:pctPos>=95?'#057a55':'#c81e1e', sub:correctos+'/'+totalReg+' reg'},
+    {label:'Exactitud Unidades', valor:pctUds + '%', color:pctUds>=93.5?'#057a55':'#c81e1e', sub:udsCorr.toLocaleString('es-AR')+'/'+totalFis.toLocaleString('es-AR')+' uds'},
+    {label:'Registros Totales', valor:totalReg.toLocaleString('es-AR'), color:'#1a56db', sub:'En el período'},
+    {label:'Unidades Físicas', valor:totalFis.toLocaleString('es-AR'), color:'#057a55', sub:'Contadas en total'},
+    {label:'LOC Únicas', valor:locUnicas.toLocaleString('es-AR'), color:'#6c2bd9', sub:'Ubicaciones barridas'},
+    {label:'SKUs Únicos', valor:skusUnicos.toLocaleString('es-AR'), color:'#0891b2', sub:'Referencias distintas'},
+    {label:'Diferencia Total (uds)', valor:totalDiffUds.toLocaleString('es-AR'), color:totalDiffUds===0?'#057a55':'#c81e1e', sub:'Suma de |diferencias|'},
+    {label:'Registros con Error', valor:(totalReg-correctos).toLocaleString('es-AR'), color:(totalReg-correctos)===0?'#057a55':'#c81e1e', sub:'De '+totalReg.toLocaleString('es-AR')+' registros'}
+  ];
+
+  document.getElementById('seniorResumen').innerHTML = resumen.map(r =>
+    `<div class="report-card">
+      <div class="report-card-title">${r.label}</div>
+      <div class="report-kpi" style="color:${r.color}">${r.valor}</div>
+      <div class="report-kpi-sub">${r.sub}</div>
+    </div>`
+  ).join('');
+
+  // --- Evolución Mensual ---
+  const meses = {};
+  datos.forEach(r => {
+    const anio = r['año'];
+    const mes = r['mes'];
+    if (!anio || !mes) return;
+    const key = anio + '-' + String(mes).padStart(2,'0');
+    if (!meses[key]) meses[key] = [];
+    meses[key].push(r);
+  });
+
+  const bodyEvo = document.getElementById('seniorEvolucion').querySelector('tbody');
+  const keys = Object.keys(meses).sort();
+  bodyEvo.innerHTML = keys.map(key => {
+    const rows = meses[key];
+    const n = rows.length;
+    const ok = rows.filter(r => num(r['Diferencia']) === 0).length;
+    const pPos = n > 0 ? Math.round(ok / n * 1000) / 10 : 0;
+    const tFis = rows.reduce((s,r) => s + num(r['Fisico']), 0);
+    const uCorr = rows.filter(r => num(r['Diferencia']) === 0).reduce((s,r) => s + num(r['Fisico']), 0);
+    const pUds = tFis > 0 ? Math.round(uCorr / tFis * 1000) / 10 : 0;
+    const locs = new Set(rows.map(r => (r['LOC']||'').trim().toUpperCase()).filter(Boolean)).size;
+    const tDiff = rows.reduce((s,r) => s + Math.abs(num(r['Diferencia'])), 0);
+    const colorPos = pPos >= 95 ? 'green' : pPos >= 90 ? 'yellow' : 'red';
+    const colorUds = pUds >= 93.5 ? 'green' : pUds >= 85 ? 'yellow' : 'red';
+    const label = key.split('-');
+    const mesNombre = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][parseInt(label[1])-1]||label[1];
+    return `<tr>
+      <td><strong>${mesNombre} ${label[0]}</strong></td>
+      <td class="num">${n.toLocaleString('es-AR')}</td>
+      <td class="num">${ok.toLocaleString('es-AR')}</td>
+      <td class="num ${colorPos}">${pPos}%</td>
+      <td class="num ${colorUds}">${pUds}%</td>
+      <td class="num">${locs.toLocaleString('es-AR')}</td>
+      <td class="num">${tFis.toLocaleString('es-AR')}</td>
+      <td class="num ${tDiff===0?'green':'red'}">${tDiff.toLocaleString('es-AR')}</td>
+    </tr>`;
+  }).join('');
+
+  // --- Performance por Colaborador ---
+  const colabs = {};
+  datos.forEach(r => {
+    const c = normalizar(r['Colaborador']);
+    if (!c || c === 'Sin datos') return;
+    if (!colabs[c]) colabs[c] = {reg:0, ok:0, fis:0, uCorr:0, locs:new Set()};
+    colabs[c].reg++;
+    const diff = num(r['Diferencia']);
+    const fis = num(r['Fisico']);
+    colabs[c].fis += fis;
+    if (diff === 0) { colabs[c].ok++; colabs[c].uCorr += fis; }
+    const loc = (r['LOC']||'').trim().toUpperCase();
+    if (loc) colabs[c].locs.add(loc);
+  });
+
+  const bodyCol = document.getElementById('seniorColabs').querySelector('tbody');
+  bodyCol.innerHTML = Object.entries(colabs).sort((a,b) => b[1].reg - a[1].reg).map(([name, d]) => {
+    const pPos = d.reg > 0 ? Math.round(d.ok / d.reg * 1000) / 10 : 0;
+    const pUds = d.fis > 0 ? Math.round(d.uCorr / d.fis * 1000) / 10 : 0;
+    const colorP = pPos >= 95 ? 'green' : pPos >= 90 ? 'yellow' : 'red';
+    const colorU = pUds >= 93.5 ? 'green' : pUds >= 85 ? 'yellow' : 'red';
+    return `<tr>
+      <td><strong>${name}</strong></td>
+      <td class="num">${d.reg.toLocaleString('es-AR')}</td>
+      <td class="num">${d.ok.toLocaleString('es-AR')}</td>
+      <td class="num ${colorP}">${pPos}%</td>
+      <td class="num">${d.fis.toLocaleString('es-AR')}</td>
+      <td class="num">${d.uCorr.toLocaleString('es-AR')}</td>
+      <td class="num ${colorU}">${pUds}%</td>
+      <td class="num">${d.locs.size.toLocaleString('es-AR')}</td>
+    </tr>`;
+  }).join('');
+
+  // --- Marcas Críticas ---
+  const marcas = {};
+  datos.forEach(r => {
+    const m = normalizar(r['Marca']);
+    if (!m || m === 'Sin datos') return;
+    if (!marcas[m]) marcas[m] = {reg:0, inc:0, fis:0, uInc:0, diff:0};
+    marcas[m].reg++;
+    const diff = num(r['Diferencia']);
+    const fis = num(r['Fisico']);
+    marcas[m].fis += fis;
+    marcas[m].diff += diff;
+    if (diff !== 0) { marcas[m].inc++; marcas[m].uInc += fis; }
+  });
+
+  const bodyMar = document.getElementById('seniorMarcas').querySelector('tbody');
+  const sortedMarcas = Object.entries(marcas).sort((a,b) => Math.abs(b[1].diff) - Math.abs(a[1].diff));
+  bodyMar.innerHTML = sortedMarcas.map(([name, d]) => {
+    const pErr = d.reg > 0 ? Math.round(d.inc / d.reg * 1000) / 10 : 0;
+    const pUdsInc = d.fis > 0 ? Math.round(d.uInc / d.fis * 1000) / 10 : 0;
+    const colorErr = pErr === 0 ? 'green' : pErr <= 5 ? 'yellow' : 'red';
+    const diffStr = d.diff > 0 ? '+'+d.diff.toLocaleString('es-AR') : d.diff.toLocaleString('es-AR');
+    return `<tr>
+      <td><strong>${name}</strong></td>
+      <td class="num">${d.reg.toLocaleString('es-AR')}</td>
+      <td class="num">${d.inc.toLocaleString('es-AR')}</td>
+      <td class="num ${colorErr}">${pErr}%</td>
+      <td class="num">${d.fis.toLocaleString('es-AR')}</td>
+      <td class="num ${d.uInc===0?'green':'red'}">${d.uInc.toLocaleString('es-AR')}</td>
+      <td class="num ${d.diff===0?'green':d.diff>0?'yellow':'red'}">${diffStr}</td>
+    </tr>`;
   }).join('');
 }
 
