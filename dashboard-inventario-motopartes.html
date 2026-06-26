@@ -254,7 +254,7 @@
     <div class="card-header">
       <div>
         <div class="card-title">Cumplimiento de Objetivos</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:2px">Exactitud actual vs objetivo establecido por la empresa</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:2px">Exactitud (calidad) + Barrido (volumen mensual) vs objetivos</div>
       </div>
       <span class="badge badge-blue" id="badgeCumplimiento">—</span>
     </div>
@@ -323,6 +323,79 @@
         <div style="display:flex;justify-content:space-between;font-size:11px">
           <span id="objSkuDiff" style="font-weight:700"></span>
           <span style="color:#6b7280">Meta: 90,5%</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SEPARADOR BARRIDO -->
+    <div style="border-top:2px dashed var(--border);margin:16px 0 18px 0"></div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:14px">📊 Barrido / Cobertura (volumen mensual)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+
+      <!-- LOC / MES -->
+      <div style="background:#f7f8fa;border:1px solid #e2e6ea;border-radius:10px;padding:18px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6b7280;margin-bottom:10px">📍 LOC / Mes</div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:#6b7280">Actual</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;line-height:1" id="barriLocActual">—</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;color:#6b7280">Objetivo</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:#6b7280">150 / mes</div>
+          </div>
+        </div>
+        <div style="background:#e2e6ea;border-radius:6px;height:10px;overflow:hidden;margin-bottom:6px">
+          <div id="barriLocBar" style="height:100%;border-radius:6px;transition:width 1.2s ease;width:0%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px">
+          <span id="barriLocDiff" style="font-weight:700"></span>
+          <span style="color:#6b7280">Meta: 150 LOC</span>
+        </div>
+      </div>
+
+      <!-- UDS / MES -->
+      <div style="background:#f7f8fa;border:1px solid #e2e6ea;border-radius:10px;padding:18px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6b7280;margin-bottom:10px">📦 Unidades / Mes</div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:#6b7280">Actual</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;line-height:1" id="barriUdsActual">—</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;color:#6b7280">Objetivo</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:#6b7280">22.000 / mes</div>
+          </div>
+        </div>
+        <div style="background:#e2e6ea;border-radius:6px;height:10px;overflow:hidden;margin-bottom:6px">
+          <div id="barriUdsBar" style="height:100%;border-radius:6px;transition:width 1.2s ease;width:0%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px">
+          <span id="barriUdsDiff" style="font-weight:700"></span>
+          <span style="color:#6b7280">Meta: 22.000 uds</span>
+        </div>
+      </div>
+
+      <!-- COBERTURA DEPÓSITO -->
+      <div style="background:#f7f8fa;border:1px solid #e2e6ea;border-radius:10px;padding:18px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6b7280;margin-bottom:10px">🏭 Cobertura Depósito</div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:#6b7280">Actual</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;line-height:1" id="barriCobActual">—</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;color:#6b7280">Total Depósito</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:#6b7280" id="barriCobTotal">—</div>
+          </div>
+        </div>
+        <div style="background:#e2e6ea;border-radius:6px;height:10px;overflow:hidden;margin-bottom:6px">
+          <div id="barriCobBar" style="height:100%;border-radius:6px;transition:width 1.2s ease;width:0%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px">
+          <span id="barriCobDiff" style="font-weight:700"></span>
+          <span style="color:#6b7280">LOC únicas contadas / total</span>
         </div>
       </div>
 
@@ -793,6 +866,8 @@ function renderDashboard(datos) {
   const OBJ_POS = 95.0;
   const OBJ_UDS = 93.5;
   const OBJ_SKU = 90.5;
+  const BARRI_LOC = 150;
+  const BARRI_UDS = 22000;
 
   // Exactitud de posiciones = % registros con diferencia 0
   const totalReg = datos.length;
@@ -825,9 +900,41 @@ function renderDashboard(datos) {
   renderObjetivo('objUdsActual','objUdsBar','objUdsDiff', pctUds, OBJ_UDS);
   renderObjetivo('objSkuActual','objSkuBar','objSkuDiff', pctSku, OBJ_SKU);
 
-  const cumplidos = [pctPos >= OBJ_POS, pctUds >= OBJ_UDS, pctSku >= OBJ_SKU].filter(Boolean).length;
-  document.getElementById('badgeCumplimiento').textContent = `${cumplidos}/3 objetivos cumplidos`;
-  document.getElementById('badgeCumplimiento').className = `badge ${cumplidos === 3 ? 'badge-green' : cumplidos >= 2 ? 'badge-yellow' : 'badge-red'}`;
+  // BARRIDO / COBERTURA
+  const locUnicas = new Set(datos.map(r => (r['LOC']||'').trim().toUpperCase()).filter(Boolean)).size;
+  const udsContadas = datos.reduce((s,r) => s + num(r['Fisico']), 0);
+  const totalLocDeposito = Object.values(configUbicaciones).reduce((s,v) => s + v, 0);
+  const pctCobertura = totalLocDeposito > 0 ? Math.min(100, Math.round(locUnicas / totalLocDeposito * 1000) / 10) : 0;
+
+  function renderBarrido(idActual, idBar, idDiff, valor, objetivo, esUnidades) {
+    const pct = objetivo > 0 ? Math.min(100, Math.round(valor / objetivo * 1000) / 10) : 0;
+    const color = pct >= 100 ? '#057a55' : pct >= 80 ? '#d97706' : '#c81e1e';
+    const diff = valor - objetivo;
+    const diffStr = diff >= 0 ? `+${esUnidades ? diff.toLocaleString('es-AR') : diff} ✅` : `${esUnidades ? diff.toLocaleString('es-AR') : diff} ❌`;
+    document.getElementById(idActual).textContent = esUnidades ? valor.toLocaleString('es-AR') : valor.toLocaleString('es-AR');
+    document.getElementById(idActual).style.color = color;
+    document.getElementById(idBar).style.width = Math.min(100, pct) + '%';
+    document.getElementById(idBar).style.background = color;
+    document.getElementById(idDiff).textContent = diffStr;
+    document.getElementById(idDiff).style.color = color;
+  }
+
+  renderBarrido('barriLocActual','barriLocBar','barriLocDiff', locUnicas, BARRI_LOC, false);
+  renderBarrido('barriUdsActual','barriUdsBar','barriUdsDiff', udsContadas, BARRI_UDS, true);
+
+  // Cobertura
+  const colorCob = pctCobertura >= 80 ? '#057a55' : pctCobertura >= 40 ? '#d97706' : '#c81e1e';
+  document.getElementById('barriCobActual').textContent = pctCobertura.toFixed(1) + '%';
+  document.getElementById('barriCobActual').style.color = colorCob;
+  document.getElementById('barriCobTotal').textContent = totalLocDeposito.toLocaleString('es-AR');
+  document.getElementById('barriCobBar').style.width = Math.min(100, pctCobertura) + '%';
+  document.getElementById('barriCobBar').style.background = colorCob;
+  document.getElementById('barriCobDiff').textContent = locUnicas.toLocaleString('es-AR') + ' / ' + totalLocDeposito.toLocaleString('es-AR') + ' LOC';
+  document.getElementById('barriCobDiff').style.color = colorCob;
+
+  const cumplidos = [pctPos >= OBJ_POS, pctUds >= OBJ_UDS, pctSku >= OBJ_SKU, locUnicas >= BARRI_LOC, udsContadas >= BARRI_UDS].filter(Boolean).length;
+  document.getElementById('badgeCumplimiento').textContent = `${cumplidos}/5 objetivos cumplidos`;
+  document.getElementById('badgeCumplimiento').className = `badge ${cumplidos === 5 ? 'badge-green' : cumplidos >= 3 ? 'badge-yellow' : 'badge-red'}`;
 
   // Avance por tipo de ubicación usando configUbicaciones como denominador real
   const tiposUbicContadas = {};
