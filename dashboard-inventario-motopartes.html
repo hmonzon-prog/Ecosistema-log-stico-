@@ -681,6 +681,11 @@ let paginaActual = 1;
 let vistaSenior = false;
 const FILAS_POR_PAG = 100;
 const CONFIG_GID = '1085149671';
+const OBJ_POS = 95.0;
+const OBJ_UDS = 93.5;
+const OBJ_SKU = 90.5;
+const BARRI_LOC = 150;
+const BARRI_UDS = 22000;
 
 function extraerAnio(fecha) {
   if (!fecha) return null;
@@ -1508,6 +1513,9 @@ function renderNarrativo(datos) {
   const pctUds = totalFis > 0 ? Math.round(udsCorr / totalFis * 1000) / 10 : 0;
   const locUnicas = new Set(datos.map(r => (r['LOC']||'').trim().toUpperCase()).filter(Boolean)).size;
   const skusUnicos = new Set(datos.map(r => r.SKU).filter(Boolean)).size;
+  const udsContadas = totalFis;
+  const totalLocDeposito = Object.values(configUbicaciones).reduce((s,v) => s + v, 0);
+  const pctCobertura = totalLocDeposito > 0 ? Math.min(100, Math.round(locUnicas / totalLocDeposito * 1000) / 10) : 0;
 
   const colabs = new Set(datos.map(r => normalizar(r['Colaborador'])).filter(c => c && c !== 'Sin datos'));
   const erroresPorColab = {};
@@ -1581,6 +1589,8 @@ function renderNarrativo(datos) {
   html += narrKpi(locUnicas.toLocaleString('es-AR'), 'Ubicaciones');
   html += narrKpi(skusUnicos.toLocaleString('es-AR'), 'SKUs');
   html += narrKpi(colabs.size.toLocaleString('es-AR'), 'Colaboradores');
+  html += narrKpi(pctCobertura.toFixed(1) + '%', 'Cobertura', pctCobertura >= 80 ? '--green' : pctCobertura >= 40 ? '--yellow' : '--red');
+  html += narrKpi(udsContadas.toLocaleString('es-AR'), 'Uds contadas', udsContadas >= BARRI_UDS ? '--green' : udsContadas >= BARRI_UDS*0.8 ? '--yellow' : '--red');
   html += `</div>`;
 
   // Texto de exactitud
@@ -1615,6 +1625,10 @@ function renderNarrativo(datos) {
 
   const diffStockStr = diffStock > 0 ? `sobrante de ${diffStock.toLocaleString('es-AR')} unidades` : diffStock < 0 ? `faltante de ${Math.abs(diffStock).toLocaleString('es-AR')} unidades` : 'sin diferencia neta';
   html += `<p style="margin:8px 0 0 0">Stock físico: <strong>${totalFis.toLocaleString('es-AR')} uds</strong> vs sistema: <strong>${totalLog.toLocaleString('es-AR')} uds</strong> — ${diffStockStr}.</p>`;
+
+  const metaLocOk = locUnicas >= BARRI_LOC;
+  const metaUdsOk = udsContadas >= BARRI_UDS;
+  html += `<p style="margin:6px 0 0 0;font-size:12px;color:var(--muted)">Barrido mensual: <strong>${locUnicas.toLocaleString('es-AR')}</strong>/${BARRI_LOC} LOC ${metaLocOk ? '✅' : '❌'} · <strong>${udsContadas.toLocaleString('es-AR')}</strong>/${BARRI_UDS.toLocaleString('es-AR')} uds ${metaUdsOk ? '✅' : '❌'} · Cobertura: <strong>${pctCobertura.toFixed(1)}%</strong> del depósito (${locUnicas.toLocaleString('es-AR')} de ${totalLocDeposito.toLocaleString('es-AR')} LOC).</p>`;
   html += `</div></div>`; // fin narr-card-text y narr-card
 
   // ============= 2. ALERTAS DETECTADAS =============
@@ -1643,6 +1657,15 @@ function renderNarrativo(datos) {
   if (bigErrors > 0) {
     alertas.push({tipo:'crit', titulo:`${bigErrors} registros con diferencias en cantidades >500 uds`, desc:'Estos registros impactan fuertemente en la exactitud general de unidades.'});
   }
+  if (pctCobertura < 80) {
+    alertas.push({tipo:pctCobertura < 40 ? 'crit' : 'warn', titulo:`Cobertura de barrido al ${pctCobertura.toFixed(1)}%`, desc:`Se han barrido ${locUnicas.toLocaleString('es-AR')} de ${totalLocDeposito.toLocaleString('es-AR')} ubicaciones totales del depósito.`});
+  }
+  if (!metaLocOk) {
+    alertas.push({tipo:'warn', titulo:`Barrido mensual de LOC por debajo de la meta`, desc:`${locUnicas.toLocaleString('es-AR')} LOC barridas vs meta de ${BARRI_LOC} LOC/mes. Faltan ${(BARRI_LOC - locUnicas).toLocaleString('es-AR')} LOC.`});
+  }
+  if (!metaUdsOk) {
+    alertas.push({tipo:'warn', titulo:`Barrido mensual de unidades por debajo de la meta`, desc:`${udsContadas.toLocaleString('es-AR')} uds contadas vs meta de ${BARRI_UDS.toLocaleString('es-AR')} uds/mes.`});
+  }
 
   if (alertas.length === 0) {
     html += `<div class="narr-alerta ok"><div class="narr-alerta-icon">✅</div><div><div class="narr-alerta-title" style="color:var(--green)">Sin alertas críticas</div><div class="narr-alerta-desc">Todos los indicadores se encuentran en rangos aceptables.</div></div></div>`;
@@ -1668,7 +1691,12 @@ function renderNarrativo(datos) {
   if (pctPos < 95) {
     recs.push('Fortalecer la capacitación en técnicas de conteo para reducir la cantidad de registros con diferencia.');
   }
-  recs.push('Mantener el ritmo de barrido actual para completar la cobertura total del depósito según la proyección estimada.');
+  if (!metaLocOk) {
+    recs.push(`Incrementar el ritmo de barrido en ubicaciones. Actualmente ${locUnicas.toLocaleString('es-AR')} LOC/mes vs meta de ${BARRI_LOC}. Faltan ${(BARRI_LOC - locUnicas).toLocaleString('es-AR')} ubicaciones para alcanzar la meta mensual.`);
+  }
+  if (pctCobertura < 80) {
+    recs.push(`Priorizar el barrido de los tipos de ubicación con menor cobertura para alcanzar el 80% del depósito. Actualmente ${pctCobertura.toFixed(1)}% de cobertura global.`);
+  }
   recs.push('Documentar las causas raíz de las diferencias encontradas para prevenir recurrencias.');
   recs.push('Establecer un plan de acción semanal con responsables asignados para cada alerta detectada.');
 
@@ -1680,8 +1708,9 @@ function renderNarrativo(datos) {
   document.getElementById('seniorNarrativo').innerHTML = html;
 }
 
-function narrKpi(val, label) {
-  return `<div class="narr-kpi"><div class="narr-kpi-val" style="color:var(--accent)">${val}</div><div class="narr-kpi-label">${label}</div></div>`;
+function narrKpi(val, label, colorVar) {
+  const c = colorVar ? `var(${colorVar})` : 'var(--accent)';
+  return `<div class="narr-kpi"><div class="narr-kpi-val" style="color:${c}">${val}</div><div class="narr-kpi-label">${label}</div></div>`;
 }
 
 function filtrarTabla() {
