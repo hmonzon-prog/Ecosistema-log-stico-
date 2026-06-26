@@ -762,7 +762,7 @@ function cargarInventario() {
       const table = resp.table;
       if (!table || !table.rows || !table.rows.length) throw new Error('La hoja de inventario está vacía');
 
-      const colNames = ['Marca','LOC','SKU','Descrip','Logico','Fisico','Diferencia','correctas','Abs','FECHA','Colaborador','tipo loc'];
+      const colNames = ['Marca','LOC','SKU','Descrip','Logico','Fisico','Diferencia','correctas','Abs','FECHA','Colaborador','tipo loc','año','mes'];
 
       todosLosDatos = table.rows.map(row => {
         const r = {};
@@ -1357,10 +1357,11 @@ function renderInformeSenior(datos) {
   // --- Evolución Mensual ---
   const meses = {};
   datos.forEach(r => {
-    const anio = r['año'];
-    const mes = r['mes'];
-    if (!anio || !mes) return;
-    const key = anio + '-' + String(mes).padStart(2,'0');
+    let f = (r['FECHA']||'').trim();
+    if (!f) return;
+    const gv = f.match(/Date\((\d{4}),(\d+),\d+\)/);
+    if (!gv) return;
+    const key = gv[1] + '-' + String(parseInt(gv[2])+1).padStart(2,'0');
     if (!meses[key]) meses[key] = [];
     meses[key].push(r);
   });
