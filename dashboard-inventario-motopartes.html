@@ -193,6 +193,30 @@
   .report-badge-ok{background:rgba(34,197,94,0.15);color:var(--green);}
   .report-badge-warn{background:rgba(234,179,8,0.15);color:var(--yellow);}
   .report-badge-fail{background:rgba(239,68,68,0.15);color:var(--red);}
+  .narr-card{border-radius:10px;padding:18px;margin-bottom:16px;border:1px solid var(--border);}
+  .narr-card.panorama{background:linear-gradient(135deg,#f0f5ff,#ffffff);border-color:#c7d7f0;}
+  .narr-card.alertas{background:#fffbfb;border-color:#f5c6c6;}
+  .narr-card.recomendaciones{background:#fafcff;border-color:#c7d7f0;}
+  .narr-card-title{font-family:var(--font-display);font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .narr-card-text{font-size:13px;line-height:1.7;color:#374151;}
+  .narr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;}
+  .narr-kpi{background:var(--surface);border-radius:8px;padding:12px;text-align:center;border:1px solid var(--border);}
+  .narr-kpi-val{font-family:var(--font-display);font-size:22px;font-weight:900;line-height:1.2;}
+  .narr-kpi-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;}
+  .narr-alerta{display:flex;align-items:flex-start;gap:12px;background:var(--surface);border-radius:8px;padding:12px 14px;margin-bottom:8px;border-left:4px solid;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+  .narr-alerta.crit{border-left-color:var(--red);}
+  .narr-alerta.warn{border-left-color:#d97706;}
+  .narr-alerta.ok{border-left-color:var(--green);}
+  .narr-alerta-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+  .narr-alerta-title{font-size:13px;font-weight:700;margin-bottom:2px;}
+  .narr-alerta-desc{font-size:12px;color:#6b7280;line-height:1.5;}
+  .narr-rec{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f0f2f5;}
+  .narr-rec:last-child{border-bottom:none;padding-bottom:0;}
+  .narr-rec-num{width:22px;height:22px;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;}
+  .narr-rec-text{font-size:13px;line-height:1.5;color:#374151;}
+  .narr-trend-up{color:var(--green);}
+  .narr-trend-down{color:var(--red);}
+  .narr-trend-stable{color:#d97706;}
 </style>
 </head>
 <body>
@@ -630,6 +654,11 @@
       </thead>
       <tbody></tbody>
     </table>
+  </div>
+
+  <div class="report-section-title">Análisis Narrativo</div>
+  <div class="card" id="seniorNarrativo" style="padding:22px;line-height:1.8">
+    <div style="font-size:13px;color:var(--muted)">Cargando análisis...</div>
   </div>
 
 </div>
@@ -1458,6 +1487,201 @@ function renderInformeSenior(datos) {
       <td class="num ${d.diff===0?'green':d.diff>0?'yellow':'red'}">${diffStr}</td>
     </tr>`;
   }).join('');
+
+  // --- Análisis Narrativo ---
+  renderNarrativo(datos);
+}
+
+function renderNarrativo(datos) {
+  if (!datos.length) {
+    document.getElementById('seniorNarrativo').innerHTML = '<div style="font-size:13px;color:var(--muted)">Sin datos para el período seleccionado.</div>';
+    return;
+  }
+
+  const totalReg = datos.length;
+  const correctos = datos.filter(r => num(r['Diferencia']) === 0).length;
+  const incorrectos = totalReg - correctos;
+  const pctPos = totalReg > 0 ? Math.round(correctos / totalReg * 1000) / 10 : 0;
+  const totalFis = datos.reduce((s,r) => s + num(r['Fisico']), 0);
+  const totalLog = datos.reduce((s,r) => s + num(r['Logico']), 0);
+  const udsCorr = datos.filter(r => num(r['Diferencia']) === 0).reduce((s,r) => s + num(r['Fisico']), 0);
+  const pctUds = totalFis > 0 ? Math.round(udsCorr / totalFis * 1000) / 10 : 0;
+  const locUnicas = new Set(datos.map(r => (r['LOC']||'').trim().toUpperCase()).filter(Boolean)).size;
+  const skusUnicos = new Set(datos.map(r => r.SKU).filter(Boolean)).size;
+
+  const colabs = new Set(datos.map(r => normalizar(r['Colaborador'])).filter(c => c && c !== 'Sin datos'));
+  const erroresPorColab = {};
+  datos.forEach(r => {
+    const c = normalizar(r['Colaborador']);
+    if (num(r['Diferencia']) !== 0 && c && c !== 'Sin datos') erroresPorColab[c] = (erroresPorColab[c]||0) + 1;
+  });
+  const colabConErrores = Object.keys(erroresPorColab).filter(c => erroresPorColab[c] > 0);
+
+  const errMarcas = {};
+  datos.filter(r => num(r['Diferencia']) !== 0).forEach(r => {
+    const m = normalizar(r['Marca']);
+    if (m && m !== 'Sin datos') {
+      errMarcas[m] = (errMarcas[m]||0) + 1;
+      errMarcas[m+'__uds'] = (errMarcas[m+'__uds']||0) + Math.abs(num(r['Diferencia']));
+    }
+  });
+  const topMarcaErr = Object.keys(errMarcas).filter(k => !k.includes('__')).sort((a,b) => (errMarcas[b]||0) - (errMarcas[a]||0)).slice(0, 3);
+
+  // --- Período anterior ---
+  let periodoAnterior = [];
+  const fechas = datos.map(r => r['FECHA']).filter(Boolean);
+  const fechasParseadas = fechas.map(f => {
+    const m = f.match(/Date\((\d{4}),(\d+),(\d+)\)/);
+    return m ? {y:m[1], m:parseInt(m[2])+1, d:m[3]} : null;
+  }).filter(Boolean);
+
+  if (mesActivo !== 'todos' && anioActivo !== 'todos') {
+    const anioNum = parseInt(anioActivo);
+    const mesNum = parseInt(mesActivo);
+    periodoAnterior = todosLosDatos.filter(r => {
+      const f = r['FECHA'];
+      const m2 = f ? f.match(/Date\((\d{4}),(\d+),(\d+)\)/) : null;
+      return m2 && parseInt(m2[1]) === anioNum - 1 && parseInt(m2[2]) + 1 === mesNum;
+    });
+  } else if (fechasParseadas.length > 0) {
+    const ultFechas = [...new Set(fechasParseadas.map(f => f.y+'-'+String(f.m).padStart(2,'0')))].sort();
+    if (ultFechas.length >= 2) {
+      const ult = ultFechas[ultFechas.length-1].split('-');
+      const ante = ultFechas[ultFechas.length-2].split('-');
+      periodoAnterior = todosLosDatos.filter(r => {
+        const f = r['FECHA'];
+        const m2 = f ? f.match(/Date\((\d{4}),(\d+),(\d+)\)/) : null;
+        return m2 && m2[1] === ante[0] && parseInt(m2[2])+1 === parseInt(ante[1]);
+      });
+    }
+  }
+
+  const prevReg = periodoAnterior.length;
+  const prevOk = periodoAnterior.filter(r => num(r['Diferencia']) === 0).length;
+  const prevPct = prevReg > 0 ? Math.round(prevOk / prevReg * 1000) / 10 : 0;
+  const prevFis = periodoAnterior.reduce((s,r) => s + num(r['Fisico']), 0);
+  const prevUdsOk = periodoAnterior.filter(r => num(r['Diferencia']) === 0).reduce((s,r) => s + num(r['Fisico']), 0);
+  const prevPctUds = prevFis > 0 ? Math.round(prevUdsOk / prevFis * 1000) / 10 : 0;
+
+  const diffPos = pctPos - prevPct;
+  const diffUds = pctUds - prevPctUds;
+  const metaPos = pctPos >= 95;
+  const metaUds = pctUds >= 93.5;
+  const diffStock = totalFis - totalLog;
+
+  let html = '';
+
+  // ============= 1. PANORAMA GENERAL =============
+  html += `<div class="narr-card panorama">`;
+  html += `<div class="narr-card-title">📊 Panorama General</div>`;
+
+  // Mini KPIs
+  html += `<div class="narr-grid">`;
+  html += narrKpi(totalReg.toLocaleString('es-AR'), 'Registros');
+  html += narrKpi(locUnicas.toLocaleString('es-AR'), 'Ubicaciones');
+  html += narrKpi(skusUnicos.toLocaleString('es-AR'), 'SKUs');
+  html += narrKpi(colabs.size.toLocaleString('es-AR'), 'Colaboradores');
+  html += `</div>`;
+
+  // Texto de exactitud
+  html += `<div class="narr-card-text">`;
+  html += `<p style="margin:0 0 10px 0">Durante el período se registraron <strong>${totalReg.toLocaleString('es-AR')} movimientos</strong> de inventario en <strong>${locUnicas.toLocaleString('es-AR')} ubicaciones</strong>, abarcando <strong>${skusUnicos.toLocaleString('es-AR')} SKUs</strong> distintos con la participación de <strong>${colabs.size} colaboradores</strong>.</p>`;
+
+  html += `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px">`;
+  // Tarjeta exactitud posiciones
+  const clsPos = metaPos ? 'narr-trend-up' : 'narr-trend-down';
+  html += `<div style="flex:1;min-width:160px;background:var(--surface);border-radius:8px;padding:10px 14px;border:1px solid var(--border)">`;
+  html += `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px">Exactitud Posiciones</div>`;
+  html += `<div style="display:flex;align-items:baseline;gap:6px"><span class="narr-kpi-val ${clsPos}" style="font-size:24px">${pctPos}%</span><span style="font-size:11px;color:var(--muted)">meta 95%</span></div>`;
+  if (prevReg > 0) {
+    const dirPos = diffPos > 0 ? '▲' : diffPos < 0 ? '▼' : '→';
+    const clPos = diffPos > 0 ? 'narr-trend-up' : diffPos < 0 ? 'narr-trend-down' : 'narr-trend-stable';
+    html += `<div style="font-size:11px;margin-top:2px"><span class="${clPos}">${dirPos} ${Math.abs(diffPos).toFixed(1)} pp</span> vs período anterior (${prevPct}%)</div>`;
+  }
+  html += `</div>`;
+
+  // Tarjeta exactitud unidades
+  const clsUds = metaUds ? 'narr-trend-up' : 'narr-trend-down';
+  html += `<div style="flex:1;min-width:160px;background:var(--surface);border-radius:8px;padding:10px 14px;border:1px solid var(--border)">`;
+  html += `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px">Exactitud Unidades</div>`;
+  html += `<div style="display:flex;align-items:baseline;gap:6px"><span class="narr-kpi-val ${clsUds}" style="font-size:24px">${pctUds}%</span><span style="font-size:11px;color:var(--muted)">meta 93,5%</span></div>`;
+  if (prevReg > 0) {
+    const dirUds = diffUds > 0 ? '▲' : diffUds < 0 ? '▼' : '→';
+    const clUds = diffUds > 0 ? 'narr-trend-up' : diffUds < 0 ? 'narr-trend-down' : 'narr-trend-stable';
+    html += `<div style="font-size:11px;margin-top:2px"><span class="${clUds}">${dirUds} ${Math.abs(diffUds).toFixed(1)} pp</span> vs período anterior (${prevPctUds}%)</div>`;
+  }
+  html += `</div>`;
+  html += `</div>`;
+
+  const diffStockStr = diffStock > 0 ? `sobrante de ${diffStock.toLocaleString('es-AR')} unidades` : diffStock < 0 ? `faltante de ${Math.abs(diffStock).toLocaleString('es-AR')} unidades` : 'sin diferencia neta';
+  html += `<p style="margin:8px 0 0 0">Stock físico: <strong>${totalFis.toLocaleString('es-AR')} uds</strong> vs sistema: <strong>${totalLog.toLocaleString('es-AR')} uds</strong> — ${diffStockStr}.</p>`;
+  html += `</div></div>`; // fin narr-card-text y narr-card
+
+  // ============= 2. ALERTAS DETECTADAS =============
+  html += `<div class="narr-card alertas">`;
+  html += `<div class="narr-card-title">⚠️ Alertas detectadas</div>`;
+
+  const alertas = [];
+
+  if (!metaUds) {
+    const udsFaltantes = Math.ceil(totalFis * 93.5 / 100) - udsCorr;
+    alertas.push({tipo:'crit', titulo:'Exactitud de unidades por debajo de la meta', desc:`Se necesitan <strong>${udsFaltantes.toLocaleString('es-AR')} unidades correctas adicionales</strong> para alcanzar el 93,5% (actual: ${pctUds}%).`});
+  }
+  if (topMarcaErr.length > 0) {
+    const detalle = topMarcaErr.map(m => `<strong>${m}</strong> (${errMarcas[m]} reg. con error, ${(errMarcas[m+'__uds']||0).toLocaleString('es-AR')} uds)`).join(', ');
+    alertas.push({tipo:'warn', titulo:'Marcas con mayor incidencia de errores', desc:detalle + '.'});
+  }
+  if (colabConErrores.length > 0) {
+    const peorColab = colabConErrores.sort((a,b) => erroresPorColab[b] - erroresPorColab[a])[0];
+    const totalColabReg = datos.filter(r => normalizar(r['Colaborador']) === peorColab).length;
+    const pctErrColab = totalColabReg > 0 ? Math.round(erroresPorColab[peorColab] / totalColabReg * 100) : 0;
+    if (pctErrColab > 5) {
+      alertas.push({tipo:'warn', titulo:`${peorColab} presenta alta tasa de error`, desc:`${erroresPorColab[peorColab]} registros con error (${pctErrColab}% de sus conteos). Reforzar capacitación.`});
+    }
+  }
+  const bigErrors = datos.filter(r => num(r['Diferencia']) !== 0 && Math.abs(num(r['Fisico'])) > 500).length;
+  if (bigErrors > 0) {
+    alertas.push({tipo:'crit', titulo:`${bigErrors} registros con diferencias en cantidades >500 uds`, desc:'Estos registros impactan fuertemente en la exactitud general de unidades.'});
+  }
+
+  if (alertas.length === 0) {
+    html += `<div class="narr-alerta ok"><div class="narr-alerta-icon">✅</div><div><div class="narr-alerta-title" style="color:var(--green)">Sin alertas críticas</div><div class="narr-alerta-desc">Todos los indicadores se encuentran en rangos aceptables.</div></div></div>`;
+  } else {
+    alertas.forEach(a => {
+      const icon = a.tipo === 'crit' ? '🔴' : '🟡';
+      html += `<div class="narr-alerta ${a.tipo}"><div class="narr-alerta-icon">${icon}</div><div><div class="narr-alerta-title">${a.titulo}</div><div class="narr-alerta-desc">${a.desc}</div></div></div>`;
+    });
+  }
+  html += `</div>`;
+
+  // ============= 3. RECOMENDACIONES =============
+  html += `<div class="narr-card recomendaciones">`;
+  html += `<div class="narr-card-title">💡 Recomendaciones</div>`;
+
+  const recs = [];
+  if (!metaUds) {
+    recs.push('Priorizar la revisión de registros con mayor cantidad de unidades en ubicaciones de <strong>CAJONES</strong> y <strong>Picking</strong>, ya que pequeños errores allí tienen gran impacto en la exactitud de unidades.');
+  }
+  if (incorrectos > 0) {
+    recs.push(`Realizar un <strong>reconteo dirigido</strong> de los ${incorrectos.toLocaleString('es-AR')} registros con diferencia antes del cierre del período.`);
+  }
+  if (pctPos < 95) {
+    recs.push('Fortalecer la capacitación en técnicas de conteo para reducir la cantidad de registros con diferencia.');
+  }
+  recs.push('Mantener el ritmo de barrido actual para completar la cobertura total del depósito según la proyección estimada.');
+  recs.push('Documentar las causas raíz de las diferencias encontradas para prevenir recurrencias.');
+  recs.push('Establecer un plan de acción semanal con responsables asignados para cada alerta detectada.');
+
+  recs.forEach((r, i) => {
+    html += `<div class="narr-rec"><div class="narr-rec-num">${i+1}</div><div class="narr-rec-text">${r}</div></div>`;
+  });
+  html += `</div>`;
+
+  document.getElementById('seniorNarrativo').innerHTML = html;
+}
+
+function narrKpi(val, label) {
+  return `<div class="narr-kpi"><div class="narr-kpi-val" style="color:var(--accent)">${val}</div><div class="narr-kpi-label">${label}</div></div>`;
 }
 
 function filtrarTabla() {
