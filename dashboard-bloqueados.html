@@ -788,12 +788,38 @@
       } catch (e) {
         console.error("Error cargando Timeline:", e);
       }
-      dataTimeline = rowsTL.filter(g => g(0)).map(g => ({
-        fecha: g(0),
-        sku: cleanNumber(g(1)),
-        unidades: cleanNumber(g(2))
-      }));
-      dataTimeline.sort((a, b) => a.fecha && b.fecha ? a.fecha.localeCompare(b.fecha) : 0);
+      dataTimeline = rowsTL.filter(g => g(0)).map(g => {
+        const raw = g(0);
+        const parts = raw.split('-');
+        const day = parseInt(parts[0], 10);
+        const monthMap = { 'ene':0,'feb':1,'mar':2,'abr':3,'may':4,'jun':5,'jul':6,'ago':7,'sep':8,'oct':9,'nov':10,'dic':11 };
+        const month = monthMap[parts[1]] !== undefined ? monthMap[parts[1]] : 0;
+        let year = 2025;
+        if (raw.match(/ene|feb|mar/) && raw < '15-mar') year = 2026; // tramo temprano 2026
+        // mejor detectar año: asumimos secuencia cronológica, detectar quiebre de dic→ene
+        return { fecha: raw, sku: cleanNumber(g(1)), unidades: cleanNumber(g(2)), dateObj: new Date(year, month, day) };
+      });
+      // asignar años correctamente detectando el salto diciembre→enero
+      let prevMonth = 12;
+      dataTimeline.forEach(d => {
+        if (d.dateObj.getMonth() < prevMonth) {
+          // hubo salto de año (ej: dic→ene)
+          if (d.dateObj.getMonth() === 0) d.dateObj.setFullYear(d.dateObj.getFullYear() + 1);
+        }
+        prevMonth = d.dateObj.getMonth();
+      });
+      // primera pasada para detectar año inicial
+      let currentYear = 2025;
+      dataTimeline.sort((a, b) => a.dateObj - b.dateObj);
+      // reasignar años detectando saltos
+      for (let i = 1; i < dataTimeline.length; i++) {
+        const diffMonths = (dataTimeline[i].dateObj.getFullYear() - dataTimeline[i-1].dateObj.getFullYear()) * 12
+                         + dataTimeline[i].dateObj.getMonth() - dataTimeline[i-1].dateObj.getMonth();
+        if (diffMonths < 0) {
+          dataTimeline[i].dateObj.setFullYear(dataTimeline[i].dateObj.getFullYear() + 1);
+        }
+      }
+      dataTimeline.sort((a, b) => a.dateObj - b.dateObj);
 
     } catch (e) {
       console.error('Error general fetching data', e);
@@ -1382,7 +1408,7 @@
     const ctx = document.getElementById('chart-timeline').getContext('2d');
     if (chartTimeline) chartTimeline.destroy();
 
-    const labels = dataTimeline.map(r => r.fecha);
+    const labels = dataTimeline.map(r => r.fecha.toUpperCase());
     const skuData = dataTimeline.map(r => r.sku);
     const undData = dataTimeline.map(r => r.unidades);
 
@@ -1429,7 +1455,7 @@
         },
         scales: {
           x: {
-            ticks: { maxTicksLimit: 15, font: { size: 10 } },
+            ticks: { maxTicksLimit: 20, font: { size: 9 } },
             grid: { display: false }
           },
           y: {
@@ -1466,7 +1492,7 @@
       const varUnd = prev ? r.unidades - prev.unidades : 0;
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td><strong>${r.fecha}</strong></td>
+        <td><strong>${r.dateObj.toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric' })}</strong></td>
         <td>${r.sku.toLocaleString()}</td>
         <td>${r.unidades.toLocaleString()}</td>
         <td style="color:${varSku < 0 ? '#10b981' : varSku > 0 ? '#ef4444' : '#6b7280'}; font-weight:600;">${varSku > 0 ? '+' : ''}${varSku.toLocaleString()}</td>
@@ -1478,7 +1504,7 @@
 
   function filterTimeline() {
     const q = document.getElementById('search-timeline').value.toLowerCase();
-    const filtered = dataTimeline.filter(r => r.fecha.toLowerCase().includes(q));
+    const filtered = dataTimeline.filter(r => r.fecha.toLowerCase().includes(q) || r.dateObj.toLocaleDateString('es-AR').includes(q));
     renderTimelineTable(filtered);
   }
 
