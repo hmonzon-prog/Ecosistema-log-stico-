@@ -1399,7 +1399,7 @@
     const ctx = document.getElementById('chart-timeline').getContext('2d');
     if (chartTimeline) chartTimeline.destroy();
 
-    const labels = dataTimeline.map(r => r.fecha.toUpperCase());
+    const labels = dataTimeline.map(r => r.dateObj.toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'2-digit' }));
     const skuData = dataTimeline.map(r => r.sku);
     const undData = dataTimeline.map(r => r.unidades);
 
@@ -1495,7 +1495,7 @@
 
   function filterTimeline() {
     const q = document.getElementById('search-timeline').value.toLowerCase();
-    const filtered = dataTimeline.filter(r => r.fecha.toLowerCase().includes(q) || r.dateObj.toLocaleDateString('es-AR').includes(q));
+    const filtered = dataTimeline.filter(r => r.dateObj.toLocaleDateString('es-AR').includes(q));
     renderTimelineTable(filtered);
   }
 
