@@ -234,6 +234,7 @@
   }
 
   function askRotacion(cols) {
+    if (rotacionCol) { analyze(); return; }
     const modal = $('columnSelectorModal');
     const options = $('columnOptions');
     const msg = $('selectorMessage');
