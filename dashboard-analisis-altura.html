@@ -96,7 +96,7 @@
       <button class="upload-btn" onclick="document.getElementById('fileInput').click()">Seleccionar Archivo</button>
     </div>
     <div class="instructions">
-      <p><strong>Instrucciones:</strong> El sistema detectará automáticamente las columnas <strong>LOC</strong>, <strong>Clase Loc</strong>, <strong>SKU</strong> y <strong>QTY</strong>. Solo se analizarán las ubicaciones marcadas como <strong>"Altura"</strong>.</p>
+      <p><strong>Instrucciones:</strong> El sistema detectará automáticamente las columnas <strong>LOC</strong>, <strong>Clase Loc</strong>, <strong>SKU</strong>, <strong>QTY</strong> y <strong>Rotacion</strong>. Solo se analizarán las ubicaciones marcadas como <strong>"Altura"</strong>.</p>
     </div>
   </div>
 
@@ -114,6 +114,7 @@
       <div class="kpi-card" style="border-left: 4px solid var(--warning);"><p class="kpi-label">Unificables</p><p class="kpi-value" id="kpiUnificables" style="color: var(--warning);">0</p></div>
       <div class="kpi-card" style="border-left: 4px solid var(--success);"><p class="kpi-label">Normales</p><p class="kpi-value" id="kpiNormales" style="color: var(--success);">0</p></div>
       <div class="kpi-card" style="border-left: 4px solid var(--danger);"><p class="kpi-label">Excedidas</p><p class="kpi-value" id="kpiExcedidas" style="color: var(--danger);">0</p></div>
+      <div class="kpi-card" style="border-left: 4px solid #8b5cf6;"><p class="kpi-label">Art. Alta Rot. en Excedidas</p><p class="kpi-value" id="kpiAltaExcedidas" style="color: #8b5cf6;">0</p></div>
     </div>
     <div class="chart-section"><canvas id="distributionChart" height="300"></canvas></div>
     <div class="table-container">
@@ -125,7 +126,7 @@
       <div style="overflow-y:auto;max-height:350px;display:block;">
         <table style="width:100%;border-collapse:collapse;">
           <thead><tr><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;z-index:1;">Calle</th>
-      <th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;z-index:1;">Ubicación</th><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;">Registros</th><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;">SKUs</th><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;">Unidades</th><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;">Estado</th><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;">Acción</th></tr></thead>
+      <th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;z-index:1;">Ubicación</th><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;">Registros</th><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;">SKUs</th><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;">Unidades</th><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;">Alta Rot.</th><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;">Estado</th><th style="padding:12px 20px;background:#f9fafb;border-bottom:1px solid var(--border);text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;">Acción</th></tr></thead>
           <tbody id="tableBody"></tbody>
         </table>
       </div>
@@ -135,7 +136,7 @@
 
 <script>
   let rawData = null, rawDataByLoc = {}, processedData = null, chartInstance = null, currentFilter = 'all';
-  let locCol = null, claseCol = null, skuCol = null, qtyCol = null;
+  let locCol = null, claseCol = null, skuCol = null, qtyCol = null, rotacionCol = null;
 
   const $ = id => document.getElementById(id);
 
@@ -170,6 +171,7 @@
         claseCol = cols.find(c => c.toUpperCase().includes('CLASE'));
         skuCol = cols.find(c => c.toUpperCase() === 'SKU' || c.toUpperCase().includes('COD') || c.toUpperCase().includes('ARTICULO'));
         qtyCol = cols.find(c => c.toUpperCase() === 'QTY' || c.toUpperCase() === 'CANTIDAD' || c.toUpperCase() === 'CANT' || c.toUpperCase().includes('CANTIDAD') || c.toUpperCase() === 'UNIDADES');
+        rotacionCol = cols.find(c => c.toUpperCase() === 'ROTACION');
 
         if (locCol && claseCol && skuCol && qtyCol) {
           analyze();
@@ -224,10 +226,35 @@
         const btn = document.createElement('button');
         btn.className = 'column-btn';
         btn.textContent = c;
-        btn.onclick = () => { qtyCol = c; analyze(); };
+        btn.onclick = () => { qtyCol = c; askRotacion(cols); };
         options.appendChild(btn);
       });
     }
+    modal.style.display = 'flex';
+  }
+
+  function askRotacion(cols) {
+    const modal = $('columnSelectorModal');
+    const options = $('columnOptions');
+    const msg = $('selectorMessage');
+    const rotCol = cols.find(c => c.toUpperCase() === 'ROTACION');
+    if (!rotCol) { analyze(); return; }
+    options.innerHTML = '';
+    msg.textContent = "Selecciona la columna de Rotación (opcional):";
+    cols.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'column-btn';
+      btn.textContent = c;
+      btn.onclick = () => { rotacionCol = c; analyze(); };
+      options.appendChild(btn);
+    });
+    const skipBtn = document.createElement('button');
+    skipBtn.className = 'column-btn';
+    skipBtn.textContent = '⏭ Saltar (sin Rotación)';
+    skipBtn.style.borderColor = '#9ca3af';
+    skipBtn.style.color = '#6b7280';
+    skipBtn.onclick = () => { analyze(); };
+    options.appendChild(skipBtn);
     modal.style.display = 'flex';
   }
 
@@ -246,6 +273,8 @@
     const counts = {};
     const skuCounts = {};
     const unitCounts = {};
+    const altaSets = {};
+    const altaEnExcedidas = new Set();
     rawDataByLoc = {};
 
     const allCols = Object.keys(rawData[0] || {});
@@ -257,16 +286,22 @@
       const s = String(r[skuCol] || '').trim();
       const q = parseFloat(r[qtyCol]) || 1;
       const d = descCol ? String(r[descCol] || '').trim() : '-';
+      const rot = rotacionCol ? String(r[rotacionCol] || '').trim().toUpperCase() : '';
+      const isAlta = rot === 'A' || rot === 'B';
       
       if (l) {
         counts[l] = (counts[l] || 0) + 1;
         unitCounts[l] = (unitCounts[l] || 0) + q;
         if (!rawDataByLoc[l]) rawDataByLoc[l] = [];
-        rawDataByLoc[l].push({ sku: s, qty: q, desc: d });
+        rawDataByLoc[l].push({ sku: s, qty: q, desc: d, rotacion: rot });
         if (s) {
           allSkus.add(s);
           if (!skuCounts[l]) skuCounts[l] = new Set();
           skuCounts[l].add(s);
+          if (isAlta) {
+            if (!altaSets[l]) altaSets[l] = new Set();
+            altaSets[l].add(s);
+          }
         }
       }
     });
@@ -274,11 +309,15 @@
     const locations = Object.entries(counts).map(([name, count]) => {
       const uniqueSkus = skuCounts[name] ? skuCounts[name].size : 0;
       const unidades = unitCounts[name] || 0;
+      const altaCount = altaSets[name] ? altaSets[name].size : 0;
       const street = name.replace(/(\D+).*/,'$1').toUpperCase();
       let status = 'Normal', action = 'Mantener';
       if (uniqueSkus <= 20) { status = 'Unificable'; action = 'Consolidar'; }
-      else if (uniqueSkus > 40) { status = 'Excedida'; action = 'Dividir'; }
-      return { name, registros: count, uniqueSkus, unidades: unidades, status, action, street };
+      else if (uniqueSkus > 40) { status = 'Excedida'; action = altaCount > 0 ? 'Bajar a Piso' : 'Dividir'; }
+      if (status === 'Excedida' && altaCount > 0) {
+        altaSets[name].forEach(sku => altaEnExcedidas.add(sku));
+      }
+      return { name, registros: count, uniqueSkus, unidades, altaSkus: altaCount, status, action, street };
     }).sort((a,b) => b.uniqueSkus - a.uniqueSkus);
 
     const streets = [...new Set(locations.map(l => l.street))].sort();
@@ -290,6 +329,7 @@
       unificables: locations.filter(l => l.status === 'Unificable').length,
       normales: locations.filter(l => l.status === 'Normal').length,
       excedidas: locations.filter(l => l.status === 'Excedida').length,
+      altaRotacionEnExcedidas: altaEnExcedidas.size,
       ubicaciones: locations,
       streets: streets
     };
@@ -302,6 +342,7 @@
     $('kpiUnificables').textContent = processedData.unificables;
     $('kpiNormales').textContent = processedData.normales;
     $('kpiExcedidas').textContent = processedData.excedidas;
+    $('kpiAltaExcedidas').textContent = processedData.altaRotacionEnExcedidas;
 
     const streetSelect = $('streetFilter');
     processedData.streets.forEach(s => {
@@ -359,13 +400,16 @@
     if (currentStreet !== 'all') {
       filtered = filtered.filter(l => l.street === currentStreet);
     }
+    if (status === 'Excedida') {
+      filtered = [...filtered].sort((a, b) => b.altaSkus - a.altaSkus);
+    }
     
     const body = $('tableBody');
     body.innerHTML = '';
     filtered.forEach(l => {
       const tr = document.createElement('tr');
       const bCls = l.status === 'Unificable' ? 'badge-unificable' : l.status === 'Normal' ? 'badge-normal' : 'badge-excedida';
-      tr.innerHTML = `<td><strong>${l.street}</strong></td><td><strong>${l.name}</strong></td><td>${l.registros}</td><td>${l.uniqueSkus}</td><td>${l.unidades}</td><td><span class="badge ${bCls}">${l.status}</span></td><td>${l.action}</td>`;
+      tr.innerHTML = `<td><strong>${l.street}</strong></td><td><strong>${l.name}</strong></td><td>${l.registros}</td><td>${l.uniqueSkus}</td><td>${l.unidades}</td><td><strong>${l.altaSkus}</strong></td><td><span class="badge ${bCls}">${l.status}</span></td><td>${l.action}</td>`;
       body.appendChild(tr);
     });
 
@@ -373,6 +417,7 @@
     $('kpiUnificables').textContent = filtered.filter(l => l.status === 'Unificable').length;
     $('kpiNormales').textContent = filtered.filter(l => l.status === 'Normal').length;
     $('kpiExcedidas').textContent = filtered.filter(l => l.status === 'Excedida').length;
+    $('kpiAltaExcedidas').textContent = filtered.filter(l => l.status === 'Excedida').reduce((sum, l) => sum + l.altaSkus, 0);
 
     const unif = filtered.filter(l => l.status === 'Unificable').length;
     const norm = filtered.filter(l => l.status === 'Normal').length;
@@ -415,6 +460,7 @@
           'SKU': item.sku,
           'Descripción': item.desc,
           'Cantidad': item.qty,
+          'Rotacion': item.rotacion,
           'Estado': loc.status,
           'Acción': loc.action
         });
