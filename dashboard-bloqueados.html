@@ -268,6 +268,7 @@
   <button class="tab" onclick="switchTab('desbloqueados')">Desbloqueados</button>
   <button class="tab" onclick="switchTab('analisis')">Evolución Histórica</button>
   <button class="tab" onclick="switchTab('desempeno')">Desempeño Usuarios</button>
+  <button class="tab" onclick="switchTab('timeline')">Línea de Tiempo</button>
 </div>
 
 <div class="container">
@@ -556,15 +557,66 @@
       </div>
     </div>
   </div>
+
+  <!-- TAB: LÍNEA DE TIEMPO -->
+  <div id="timeline" class="content-section">
+    <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Registros</div>
+        <div class="kpi-value" id="kpi-tl-registros">-</div>
+        <div class="kpi-sub">Fechas relevadas</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">SKUs (Promedio)</div>
+        <div class="kpi-value" id="kpi-tl-skuprom">-</div>
+        <div class="kpi-sub">QTY SKU promedio</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Unidades (Promedio)</div>
+        <div class="kpi-value" id="kpi-tl-undprom">-</div>
+        <div class="kpi-sub">QTY UNIDADES promedio</div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom: 24px;">
+      <h3 style="border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 16px;">Evolución de Bloqueados en el Tiempo</h3>
+      <div class="chart-wrapper" style="height: 300px;">
+        <canvas id="chart-timeline"></canvas>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Detalle por Fecha</h3>
+        <input type="text" class="search-box" id="search-timeline" placeholder="Buscar fecha..." onkeyup="filterTimeline()">
+      </div>
+      <div class="table-wrapper">
+        <table id="table-timeline">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>QTY SKU</th>
+              <th>QTY Unidades</th>
+              <th>Var. SKU</th>
+              <th>Var. Unidades</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-timeline">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
   let dataBloqueados = [];
   let dataDesbloqueados = [];
   let dataHistorico = [];
+  let dataTimeline = [];
   let historicoComparado = [];
   
-  let chartMotivoBloq, chartMarcaBloq, chartMotivoDesbloq, chartMarcaDesbloq, chartHistTrend;
+  let chartMotivoBloq, chartMarcaBloq, chartMotivoDesbloq, chartMarcaDesbloq, chartHistTrend, chartTimeline;
   
   let valorVisible = true;
   
@@ -606,6 +658,7 @@
     renderTableBloqueados(dataBloqueados);
     renderTableDesbloqueados(dataDesbloqueados);
     renderHistorico();
+    renderTimeline();
     filterDesempeno();
   }
   
@@ -727,6 +780,20 @@
         motivo: g(3),
         fecha: g(4)
       }));
+
+      // TIMELINE -> gid=1651517326
+      let rowsTL = [];
+      try {
+        rowsTL = await fetchGViz(sheetId, '1651517326', 'select *', '__gvizTLCallback');
+      } catch (e) {
+        console.error("Error cargando Timeline:", e);
+      }
+      dataTimeline = rowsTL.filter(g => g(0)).map(g => ({
+        fecha: g(0),
+        sku: cleanNumber(g(1)),
+        unidades: cleanNumber(g(2))
+      }));
+      dataTimeline.sort((a, b) => a.fecha && b.fecha ? a.fecha.localeCompare(b.fecha) : 0);
 
     } catch (e) {
       console.error('Error general fetching data', e);
@@ -1303,6 +1370,118 @@
     });
   }
   
+  function renderTimeline() {
+    const registros = dataTimeline.length;
+    const skuProm = registros > 0 ? Math.round(dataTimeline.reduce((s, r) => s + r.sku, 0) / registros) : 0;
+    const undProm = registros > 0 ? Math.round(dataTimeline.reduce((s, r) => s + r.unidades, 0) / registros) : 0;
+
+    document.getElementById('kpi-tl-registros').textContent = registros;
+    document.getElementById('kpi-tl-skuprom').textContent = skuProm.toLocaleString();
+    document.getElementById('kpi-tl-undprom').textContent = undProm.toLocaleString();
+
+    const ctx = document.getElementById('chart-timeline').getContext('2d');
+    if (chartTimeline) chartTimeline.destroy();
+
+    const labels = dataTimeline.map(r => r.fecha);
+    const skuData = dataTimeline.map(r => r.sku);
+    const undData = dataTimeline.map(r => r.unidades);
+
+    chartTimeline = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'QTY SKU',
+            data: skuData,
+            borderColor: '#1a56db',
+            backgroundColor: 'rgba(26, 86, 219, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            yAxisID: 'y'
+          },
+          {
+            label: 'QTY UNIDADES',
+            data: undData,
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 10 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { maxTicksLimit: 15, font: { size: 10 } },
+            grid: { display: false }
+          },
+          y: {
+            type: 'linear',
+            position: 'left',
+            title: { display: true, text: 'SKUs', color: '#1a56db' },
+            ticks: { callback: v => v.toLocaleString() }
+          },
+          y1: {
+            type: 'linear',
+            position: 'right',
+            title: { display: true, text: 'Unidades', color: '#ef4444' },
+            ticks: { callback: v => v.toLocaleString() },
+            grid: { drawOnChartArea: false }
+          }
+        }
+      }
+    });
+
+    renderTimelineTable(dataTimeline);
+  }
+
+  function renderTimelineTable(data) {
+    const tbody = document.getElementById('tbody-timeline');
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#6b7280;">Sin datos</td></tr>';
+      return;
+    }
+    for (let i = 0; i < data.length; i++) {
+      const r = data[i];
+      const prev = i > 0 ? data[i - 1] : null;
+      const varSku = prev ? r.sku - prev.sku : 0;
+      const varUnd = prev ? r.unidades - prev.unidades : 0;
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><strong>${r.fecha}</strong></td>
+        <td>${r.sku.toLocaleString()}</td>
+        <td>${r.unidades.toLocaleString()}</td>
+        <td style="color:${varSku < 0 ? '#10b981' : varSku > 0 ? '#ef4444' : '#6b7280'}; font-weight:600;">${varSku > 0 ? '+' : ''}${varSku.toLocaleString()}</td>
+        <td style="color:${varUnd < 0 ? '#10b981' : varUnd > 0 ? '#ef4444' : '#6b7280'}; font-weight:600;">${varUnd > 0 ? '+' : ''}${varUnd.toLocaleString()}</td>
+      `;
+      tbody.appendChild(row);
+    }
+  }
+
+  function filterTimeline() {
+    const q = document.getElementById('search-timeline').value.toLowerCase();
+    const filtered = dataTimeline.filter(r => r.fecha.toLowerCase().includes(q));
+    renderTimelineTable(filtered);
+  }
+
   function formatCurrency(value) {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
